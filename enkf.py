@@ -40,6 +40,9 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
 
+    # if True, use gain from modulated ensemble to
+    # update perts.  if False, use gain from original ensemble.
+    update_xprime = True
     if z is None:
         # set ensemble to square root of localized Pb
         Pb = covlocal*np.dot(xprime.T,xprime)/(nanals-1)
@@ -84,24 +87,16 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         kfgain = pbht/(hpbht+oberrvar)
         xmean = xmean + kfgain*(ob-hxmean[nob])
         xprime2 = xprime2 - gainfact*kfgain*hxens
+        if not update_xprime:
+            hpbht = (hxens_orig**2).sum()/(nanals-1)
+            gainfact = ((hpbht+oberrvar)/hpbht*\
+                       (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
+            pbht = (xprime.T*hxens_orig[:,0]).sum(axis=1)/float(nanals-1)
+            kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
         xprime  = xprime  - gainfact*kfgain*hxens_orig
     #print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
     #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
     #raise SystemExit
-    # update original perts with (unmodulated) serial ensrf.
-    #hxprime = np.empty((nanals, nobs), xprime.dtype)
-    #for nob,ob in zip(np.arange(nobs),obs):
-    #    # forward operator.
-    #    for nanal in range(nanals):
-    #        hxprime[nanal] = np.dot(h,xprime[nanal])
-    #    # state space update
-    #    hxens = hxprime[:,nob].reshape((nanals, 1))
-    #    hpbht = (hxens**2).sum()/(nanals-1)
-    #    gainfact = ((hpbht+oberrvar)/hpbht*\
-    #               (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
-    #    pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
-    #    kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
-    #    xprime = xprime - gainfact*kfgain*hxens
     return xmean, xprime
 
 def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
@@ -172,13 +167,24 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     enswts = np.sqrt(nanals2-1)*painv
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     # random sample of posterior modulated ensemble to update ens perts.
-    #xprime2 = np.dot(enswts.T,xprime2)
-    ##print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
+    xprime2 = np.dot(enswts.T,xprime2)
+    #print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
+    # subsample xprime2 in eigenspace
+    #Pa = np.dot(xprime2.T,xprime2)/(nanals2-1)
+    #evals, eigs = np.linalg.eigh(Pa)
+    #evalsum = evals.sum(); frac = evals[ndim-nanals:ndim].sum()/evalsum
+    #evals = np.where(evals > 1.e-10, evals, 1.e-10)
+    #xprime2 = np.sqrt(nanals2-1)*(eigs*np.sqrt(evals/frac)).T
+    #xprime = np.sqrt(float(nanals-1)/float(nanals2-1))*xprime2[ndim-nanals:ndim,:]
+    #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+    #raise SystemExit
+    # subsample xprime2 randomly.
     #nanals_ran = np.random.choice(np.arange(nanals2),nanals)
     #xprime = xprime2[nanals_ran]
     #xprime = xprime - xprime.mean(axis=0) # ensure zero mean
-    #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+    ##print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
     #raise SystemExit
+    #return xmean, xprime
     # update perts with serial ensrf.
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nob,ob in zip(np.arange(nobs),obs):
