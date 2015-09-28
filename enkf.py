@@ -11,9 +11,6 @@ def symsqrtm(a):
 def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
-    hxprime = np.empty((nanals, nobs), xprime.dtype)
-    #for nanal in range(nanals):
-    #    hxprime[nanal] = np.dot(h,xprime[nanal])
     #hxmean = np.dot(h,xmean)
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(ndim),xmean)
@@ -22,17 +19,16 @@ def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     #raise SystemExit
     for nob,ob in zip(np.arange(nobs),obs):
         # forward operator.
-        for nanal in range(nanals):
-            hxprime[nanal] = np.dot(h,xprime[nanal])
-        hxmean = np.dot(h,xmean)
+        hxprime = np.dot(xprime,h[nob])
+        hxmean = np.dot(h[nob],xmean)
         # state space update
-        hxens = hxprime[:,nob].reshape((nanals, 1))
+        hxens = hxprime.reshape((nanals, 1))
         hpbht = (hxens**2).sum()/(nanals-1)
         gainfact = ((hpbht+oberrvar)/hpbht*\
                    (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
         pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
         kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
-        xmean = xmean + kfgain*(ob-hxmean[nob])
+        xmean = xmean + kfgain*(ob-hxmean)
         xprime = xprime - gainfact*kfgain*hxens
     return xmean, xprime
 
@@ -68,24 +64,20 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
 
     # update xmean using full xprime2
     # update original xprime using gain from full xprime2
-    hxprime = np.empty((nanals2, nobs), xprime.dtype)
-    hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
     for nob,ob in zip(np.arange(nobs),obs):
         # forward operator.
-        for nanal in range(nanals2):
-            hxprime[nanal] = np.dot(h,xprime2[nanal])
-        for nanal in range(nanals):
-            hxprime_orig[nanal] = np.dot(h,xprime[nanal])
+        hxprime = np.dot(xprime2,h[nob])
+        hxprime_orig = np.dot(xprime,h[nob])
         hxmean = np.dot(h,xmean)
         # state space update
-        hxens = hxprime[:,nob].reshape((nanals2, 1))
-        hxens_orig = hxprime_orig[:,nob].reshape((nanals, 1))
+        hxens = hxprime.reshape((nanals2, 1))
+        hxens_orig = hxprime_orig.reshape((nanals, 1))
         hpbht = (hxens**2).sum()/(nanals2-1)
         gainfact = ((hpbht+oberrvar)/hpbht*\
                    (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
         pbht = (xprime2.T*hxens[:,0]).sum(axis=1)/float(nanals2-1)
         kfgain = pbht/(hpbht+oberrvar)
-        xmean = xmean + kfgain*(ob-hxmean[nob])
+        xmean = xmean + kfgain*(ob-hxmean)
         xprime2 = xprime2 - gainfact*kfgain*hxens
         if not update_xprime:
             hpbht = (hxens_orig**2).sum()/(nanals-1)
@@ -186,13 +178,11 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     #raise SystemExit
     #return xmean, xprime
     # update perts with serial ensrf.
-    hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nob,ob in zip(np.arange(nobs),obs):
         # forward operator.
-        for nanal in range(nanals):
-            hxprime[nanal] = np.dot(h,xprime[nanal])
+        hxprime = np.dot(xprime,h[nob])
         # state space update
-        hxens = hxprime[:,nob].reshape((nanals, 1))
+        hxens = hxprime.reshape((nanals, 1))
         hpbht = (hxens**2).sum()/(nanals-1)
         gainfact = ((hpbht+oberrvar)/hpbht*\
                    (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
