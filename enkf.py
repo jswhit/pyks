@@ -68,7 +68,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         # forward operator.
         hxprime = np.dot(xprime2,h[nob])
         hxprime_orig = np.dot(xprime,h[nob])
-        hxmean = np.dot(h,xmean)
+        hxmean = np.dot(h[nob],xmean)
         # state space update
         hxens = hxprime.reshape((nanals2, 1))
         hxens_orig = hxprime_orig.reshape((nanals, 1))
