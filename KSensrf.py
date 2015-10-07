@@ -211,7 +211,9 @@ for nassim in range(0,ntot,nsteps):
         print nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean())
     # relaxation to prior variance inflation
     if covinflate < 1:
-        xprime = xprime*np.sqrt(1.+covinflate*(fsprd.mean()-asprd.mean())/fsprd.mean())
+        fstdev = np.sqrt(fsprd); astdev = np.sqrt(asprd)
+        inf_fact = 1.+covinflate*(fstdev-astdev)/astdev
+        xprime *= inf_fact
     # run forecast model.
     ensemble.x = xmean + xprime
     for n in range(nsteps):
