@@ -215,10 +215,9 @@ for nassim in range(0,ntot,nsteps):
         inf_fact = 1.-covinflate1*(fstdev-astdev)/astdev
     else:
         # posterior inflation (Hodyss and Campbell)
-        nminus1 = ensemble.members
-        inc = xmean - xmean_b
-        inf_fact = covinflate1*asprd + (fsprd/nminus1)*(asprd/fsprd)**2 +\
-                   covinflate2*(2.*inc**2/nminus1)*(asprd/fsprd)**2
+        nmem = ensemble.members; inc = xmean - xmean_b
+        inf_fact = covinflate1*asprd + \
+        (asprd/fsprd)**2*((fsprd/nmem) + covinflate2*(2.*inc**2/(nmem-1)))
         inf_fact = np.sqrt(inf_fact/asprd)
     xprime *= inf_fact
     # run forecast model.
