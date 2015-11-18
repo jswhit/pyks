@@ -55,6 +55,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
             for nanal in range(nanals):
                 #print j,nanal,z[neig-j-1,:].min(), z[neig-j-1,:].max()
                 xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
+                # unmodulated member is j=1, scaled by z[-1] (a constant)
                 nanal2 += 1
         xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
     #print xprime2.shape
@@ -137,12 +138,14 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     if z is None:
         raise ValueError('z not specified')
     # modulation ensemble
+    print 'here'
     neig = z.shape[0]; nanals2 = neig*nanals; nanal2 = 0
     xprime2 = np.zeros((nanals2,ndim),xprime.dtype)
     for j in range(neig):
         for nanal in range(nanals):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
+    print 'here 2'
     xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
@@ -157,38 +160,28 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     painv = np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
     kfgain = np.dot(xprime2.T,np.dot(np.dot(painv,painv.T),YbRinv))
     enswts = np.sqrt(nanals2-1)*painv
+    #       tmp = np.dot(np.dot(np.dot(painv, painv.T), YbRinv), ominusf)
+    #       return np.sqrt(nanals-1)*painv + tmp[:,np.newaxis]
+    #            wts = calcwts(hx[:,mask],Rinv,omf[mask])
+    #            xens[:,k,n] = xmean[k,n] + np.dot(wts.T, xprime[:,k,n])
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    # random sample of posterior modulated ensemble to update ens perts.
-    xprime2 = np.dot(enswts.T,xprime2)
-    #print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
-    # subsample xprime2 in eigenspace
-    #Pa = np.dot(xprime2.T,xprime2)/(nanals2-1)
-    #evals, eigs = np.linalg.eigh(Pa)
-    #evalsum = evals.sum(); frac = evals[ndim-nanals:ndim].sum()/evalsum
-    #evals = np.where(evals > 1.e-10, evals, 1.e-10)
-    #xprime2 = np.sqrt(nanals2-1)*(eigs*np.sqrt(evals/frac)).T
-    #xprime = np.sqrt(float(nanals-1)/float(nanals2-1))*xprime2[ndim-nanals:ndim,:]
-    #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+    # project weights on un-modulated ensemble.
+    #hxprime = np.empty((nanals, nobs), xprime.dtype)
+    #for nanal in range(nanals):
+    #    hxprime[nanal] = np.dot(h,xprime[nanal])
+    #hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
+    #xprime = xprime - np.dot(0.5*kfgain, hxprime_tmp).T.squeeze()
+    enswts = np.sqrt(nanals-1)*painv
+    xprime = np.dot(enswts.T[:,0:nanals],xprime)
+    #xprime = np.dot(enswts.T[:,0:nanals],xprime2[0:nanals])
+    #print xprime.min(), xprime.max()
     #raise SystemExit
-    # subsample xprime2 randomly.
-    #nanals_ran = np.random.choice(np.arange(nanals2),nanals)
-    #xprime = xprime2[nanals_ran]
-    #xprime = xprime - xprime.mean(axis=0) # ensure zero mean
-    ##print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+    #xprime = np.dot(enswts.T,xprime2)[0:nanals]
+    #print xprime.min(), xprime.max()
     #raise SystemExit
-    #return xmean, xprime
-    # update perts with serial ensrf.
-    for nob,ob in zip(np.arange(nobs),obs):
-        # forward operator.
-        hxprime = np.dot(xprime,h[nob])
-        # state space update
-        hxens = hxprime.reshape((nanals, 1))
-        hpbht = (hxens**2).sum()/(nanals-1)
-        gainfact = ((hpbht+oberrvar)/hpbht*\
-                   (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
-        pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
-        kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
-        xprime = xprime - gainfact*kfgain*hxens
+    #print (enswts.T).shape,xprime2.shape,xprime.shape
+    #raise SystemExit
+    #xprime = np.dot(enswts.T[:,0:nanals],xprime2[0:nanals])
     return xmean, xprime
 
 def letkf(xmean,xprime,h,obs,oberrvar,obcovlocal):
