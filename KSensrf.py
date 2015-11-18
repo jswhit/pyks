@@ -3,7 +3,7 @@ import numpy as np
 import sys
 from KS import KS
 from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
-                 serial_ensrf_modens
+                 serial_ensrf_modens, bulk_enkf
 
 if len(sys.argv) < 3:
     msg="""python KSensrf.py covinflate covlocal method
@@ -32,15 +32,16 @@ covinflate = float(sys.argv[1])
 corrl = float(sys.argv[2])
 method = int(sys.argv[3])
 
-ntstart = 100 # time steps to spin up truth run
-ntimes = 1100 # ob times
-nens = 10 # ensemble members
+ntstart = 500 # time steps to spin up truth run
+ntimes = 5500 # ob times
+nens = 8 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
-verbose = True # print error stats every time if True
+verbose = False # print error stats every time if True
 dtassim = 0.1  # assimilation interval
-smooth_len = 15 # smoothing interval for H operator (0 or identity obs).
+smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
+denkf = False # DEnKF or perturbed obs.
 # other model parameters...
 dt = dtassim; diffusion = 0.05; exponent = 16; npts = 128
 
@@ -122,9 +123,11 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
     elif method == 4: # serial ensrf using 'modulated' ensemble
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 5: # etkf using 'modulated' ensemble
-        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=denkf)
     elif method == 6: # serial ensrf using sqrt of localized Pb
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,None)
+    elif method == 7: # enkf with perturbed obs all at once
+        return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=denkf)
     else:
         raise ValueError('illegal value for enkf method flag')
 
@@ -185,9 +188,10 @@ aerrmean = np.zeros(ndim,np.float)
 for nassim in range(0,ntot,nsteps):
     # assimilate obs
     xmean = ensemble.x.mean(axis=0)
+    xmean_b = xmean.copy()
     xprime = ensemble.x - xmean
     # standard covariance inflation.
-    if covinflate >= 1.: xprime = covinflate*xprime
+    if covinflate > 1.: xprime = covinflate*xprime
     # calculate background error, sprd stats.
     ferr = (xmean - xtruth[nassim])**2
     if np.isnan(ferr.mean()):
@@ -217,9 +221,15 @@ for nassim in range(0,ntot,nsteps):
     if verbose:
         print nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean())
     # relaxation to prior variance inflation
-    if covinflate < 1:
-        fstdev = np.sqrt(fsprd); astdev = np.sqrt(asprd)
-        inf_fact = 1.+covinflate*(fstdev-astdev)/astdev
+    if covinflate <= 1:
+        if covinflate == 1:
+            # Hodyss and Campbell
+            inc = xmean - xmean_b
+            inf_fact = np.sqrt(1. + \
+            covinflate*(asprd/fsprd**2)*((fsprd/ensemble.members) + (2.*inc**2/(ensemble.members-1))))
+        else:
+            fstdev = np.sqrt(fsprd); astdev = np.sqrt(asprd)
+            inf_fact = 1.+covinflate*(fstdev-astdev)/astdev
         xprime *= inf_fact
     # run forecast model.
     ensemble.x = xmean + xprime

@@ -1,4 +1,6 @@
 import numpy as np
+import scipy.linalg as la
+dpotrf, dpotri = la.lapack.get_lapack_funcs(("potrf", "potri"))
 
 def symsqrtm(a):
     """symmetric square-root of a symmetric positive definite matrix"""
@@ -43,7 +45,6 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         # set ensemble to square root of localized Pb
         Pb = covlocal*np.dot(xprime.T,xprime)/(nanals-1)
         evals, eigs = np.linalg.eigh(Pb)
-        print evals.sum()
         evals = np.where(evals > 1.e-10, evals, 1.e-10)
         nanals2 = eigs.shape[0]
         xprime2 = np.sqrt(nanals2-1)*(eigs*np.sqrt(evals)).T
@@ -112,6 +113,30 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     xprime = xprime - np.dot(reducedgain, hxprime_tmp).T.squeeze()
     return xmean, xprime
 
+def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
+    """bulk enkf method with perturbed obs, or DEnKF"""
+    nanals, ndim = xprime.shape; nobs = obs.shape[-1]
+    R = oberrvar*np.eye(nobs)
+    Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
+    Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
+    Pb = covlocal*Pb
+    C = np.dot(np.dot(h,Pb),h.T)+R
+    Cinv = np.linalg.inv(C)
+    kfgain = np.dot(np.dot(Pb,h.T),Cinv)
+    xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
+    hxprime = np.empty((nanals, nobs), xprime.dtype)
+    if not denkf:
+        obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+        obnoise = obnoise - obnoise.mean(axis=0)
+    else:
+        obnoise = np.zeros((nanals,nobs))
+        kfgain = 0.5*kfgain
+    for nanal in range(nanals):
+        hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
+    hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
+    xprime = xprime - np.dot(kfgain, hxprime_tmp).T.squeeze()
+    return xmean, xprime
+
 def etkf(xmean,xprime,h,obs,oberrvar):
     """ETKF (use only with full rank ensemble, no localization)"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
@@ -132,20 +157,18 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     xprime = np.dot(enswts.T,xprime)
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
-    """ETKF (use only with full rank ensemble, no localization)"""
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=False):
+    """ETKF with modulated ensemble. Perturbed of or DEnKF for ens perts."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
         raise ValueError('z not specified')
     # modulation ensemble
-    print 'here'
     neig = z.shape[0]; nanals2 = neig*nanals; nanal2 = 0
     xprime2 = np.zeros((nanals2,ndim),xprime.dtype)
     for j in range(neig):
         for nanal in range(nanals):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
-    print 'here 2'
     xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
@@ -156,32 +179,27 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     YbRinv = np.dot(hxprime,Rinv)
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
     evals, eigs = np.linalg.eigh(pa)
-    # make square root symmetric.
-    painv = np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
-    kfgain = np.dot(xprime2.T,np.dot(np.dot(painv,painv.T),YbRinv))
-    enswts = np.sqrt(nanals2-1)*painv
-    #       tmp = np.dot(np.dot(np.dot(painv, painv.T), YbRinv), ominusf)
-    #       return np.sqrt(nanals-1)*painv + tmp[:,np.newaxis]
-    #            wts = calcwts(hx[:,mask],Rinv,omf[mask])
-    #            xens[:,k,n] = xmean[k,n] + np.dot(wts.T, xprime[:,k,n])
+    painv = np.dot(np.dot(eigs,np.diag(1./evals)),eigs.T)
+    kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    # project weights on un-modulated ensemble.
-    #hxprime = np.empty((nanals, nobs), xprime.dtype)
-    #for nanal in range(nanals):
-    #    hxprime[nanal] = np.dot(h,xprime[nanal])
-    #hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
-    #xprime = xprime - np.dot(0.5*kfgain, hxprime_tmp).T.squeeze()
-    enswts = np.sqrt(nanals-1)*painv
-    xprime = np.dot(enswts.T[:,0:nanals],xprime)
-    #xprime = np.dot(enswts.T[:,0:nanals],xprime2[0:nanals])
-    #print xprime.min(), xprime.max()
-    #raise SystemExit
-    #xprime = np.dot(enswts.T,xprime2)[0:nanals]
-    #print xprime.min(), xprime.max()
-    #raise SystemExit
-    #print (enswts.T).shape,xprime2.shape,xprime.shape
-    #raise SystemExit
-    #xprime = np.dot(enswts.T[:,0:nanals],xprime2[0:nanals])
+    # perturbed obs update of original ensemble
+    hxprime = np.empty((nanals, nobs), xprime.dtype)
+    if not denkf:
+        obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+        obnoise = obnoise - obnoise.mean(axis=0)
+    else:
+        obnoise = np.zeros((nanals,nobs))
+        kfgain = 0.5*kfgain
+    #oberr = np.sqrt((obnoise**2).sum(axis=0)/(nanals-1))
+    #print oberr.mean(), np.sqrt(oberrvar)
+    for nanal in range(nanals):
+        hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
+    hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
+    xprime = xprime - np.dot(kfgain, hxprime_tmp).T.squeeze()
+    # random sample of modulated analysis ensemble.
+    #enswts = np.sqrt(nanals2-1)*np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
+    #indxens = np.random.choice(nanals2,size=nanals)
+    #xprime = np.dot(enswts.T,xprime2)[indxens]
     return xmean, xprime
 
 def letkf(xmean,xprime,h,obs,oberrvar,obcovlocal):
