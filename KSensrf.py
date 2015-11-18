@@ -32,8 +32,8 @@ covinflate = float(sys.argv[1])
 corrl = float(sys.argv[2])
 method = int(sys.argv[3])
 
-ntstart = 1000 # time steps to spin up truth run
-ntimes = 11000 # ob times
+ntstart = 100 # time steps to spin up truth run
+ntimes = 1100 # ob times
 nens = 10 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
 verbose = True # print error stats every time if True
@@ -162,6 +162,12 @@ if method in [4,5]:
     #print 'neig = ',neig
     zz = (eigs*np.sqrt(evals/frac)).T
     z = zz[ndim-neig:ndim,:]
+    #import matplotlib.pyplot as plt
+    #print zz[-1].min(),zz[-1].max(),np.sqrt(ndim)*eigs[:,-1].min(),np.sqrt(ndim)*eigs[:,-1].max()
+    #print np.sqrt(evals[-1]/(ndim*frac))
+    #scalefact_eig1 = zz[-1].max()
+    #plt.plot(zz[-1]) # 1st eigenvector.
+    #plt.show()
 else:
     neig = 0
     z = None
@@ -194,10 +200,11 @@ for nassim in range(0,ntot,nsteps):
         fcsterr.append(ferr.mean()); fcstsprd.append(fsprd.mean())
     # update state estimate.
     # use 'bulk' ensrf for first half of spinup period.
-    if nassim < nspinup/2:
-        xmean,xprime =\
-        ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=1,z=z)
-    else:
+    #if nassim < nspinup/2:
+    #    xmean,xprime =\
+    #    ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=1,z=z)
+    #else:
+    if 1:
         xmean,xprime =\
         ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=method,z=z)
     # calculate analysis error, sprd stats.
