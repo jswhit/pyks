@@ -1,6 +1,4 @@
 import numpy as np
-import scipy.linalg as la
-dpotrf, dpotri = la.lapack.get_lapack_funcs(("potrf", "potri"))
 
 def symsqrtm(a):
     """symmetric square-root of a symmetric positive definite matrix"""
