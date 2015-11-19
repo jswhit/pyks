@@ -122,13 +122,13 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
     Cinv = np.linalg.inv(C)
     kfgain = np.dot(np.dot(Pb,h.T),Cinv)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
-    hxprime = np.empty((nanals, nobs), xprime.dtype)
     if not denkf:
         obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
         obnoise = obnoise - obnoise.mean(axis=0)
     else:
         obnoise = np.zeros((nanals,nobs))
         kfgain = 0.5*kfgain
+    hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
     hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
@@ -181,15 +181,23 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=False):
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     # perturbed obs update of original ensemble
-    hxprime = np.empty((nanals, nobs), xprime.dtype)
     if not denkf:
         obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
         obnoise = obnoise - obnoise.mean(axis=0)
     else:
         obnoise = np.zeros((nanals,nobs))
         kfgain = 0.5*kfgain
+        #R = oberrvar*np.eye(nobs)
+        #Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
+        #hpbht = np.dot(hxprime.T, hxprime)
+        #C = hpbht+R; Cinv = np.linalg.inv(C)
+        ##pbht = np.dot(xprime2.T, hxprime)
+        #pbht = np.dot(kfgain, C)
+        #Csqrt, Csqrtinv =  symsqrtm(C)
+        #kfgain = np.dot(np.dot(pbht,Csqrtinv.T),np.linalg.inv(Csqrt + Rsqrt))
     #oberr = np.sqrt((obnoise**2).sum(axis=0)/(nanals-1))
     #print oberr.mean(), np.sqrt(oberrvar)
+    hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
     hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
