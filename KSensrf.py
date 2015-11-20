@@ -32,16 +32,15 @@ covinflate = float(sys.argv[1])
 corrl = float(sys.argv[2])
 method = int(sys.argv[3])
 
-ntstart = 500 # time steps to spin up truth run
-ntimes = 5500 # ob times
+ntstart = 1000 # time steps to spin up truth run
+ntimes = 11000 # ob times
 nens = 8 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
-verbose = True # print error stats every time if True
+verbose = False # print error stats every time if True
 dtassim = 0.1  # assimilation interval
 smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
-denkf = False # DEnKF or perturbed obs.
 # other model parameters...
 dt = dtassim; diffusion = 0.05; exponent = 16; npts = 128
 
@@ -123,11 +122,11 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
     elif method == 4: # serial ensrf using 'modulated' ensemble
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 5: # etkf using 'modulated' ensemble
-        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=denkf)
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 6: # serial ensrf using sqrt of localized Pb
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,None)
     elif method == 7: # enkf with perturbed obs all at once
-        return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=denkf)
+        return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal)
     else:
         raise ValueError('illegal value for enkf method flag')
 

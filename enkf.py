@@ -110,8 +110,8 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     xprime = xprime - np.dot(reducedgain, hxprime[:,:,np.newaxis]).T.squeeze()
     return xmean, xprime
 
-def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
-    """bulk enkf method with perturbed obs, or DEnKF"""
+def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal):
+    """bulk enkf method with perturbed obs"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     R = oberrvar*np.eye(nobs)
     Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
@@ -121,12 +121,8 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
     Cinv = np.linalg.inv(C)
     kfgain = np.dot(np.dot(Pb,h.T),Cinv)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
-    if not denkf:
-        obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
-        obnoise = obnoise - obnoise.mean(axis=0)
-    else:
-        obnoise = np.zeros((nanals,nobs))
-        kfgain = 0.5*kfgain
+    obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+    obnoise = obnoise - obnoise.mean(axis=0)
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
@@ -153,8 +149,8 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     xprime = np.dot(enswts.T,xprime)
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=False):
-    """ETKF with modulated ensemble. Perturbed of or DEnKF for ens perts."""
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
+    """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
         raise ValueError('z not specified')
@@ -178,34 +174,14 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=False):
     painv = np.dot(np.dot(eigs,np.diag(1./evals)),eigs.T)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    # perturbed obs or deterministic update of original ensemble
-    #if not denkf:
-    #    obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
-    #    obnoise = obnoise - obnoise.mean(axis=0)
-    #else:
-    #    obnoise = np.zeros((nanals,nobs))
-    #    kfgain = 0.5*kfgain
-    #    #R = oberrvar*np.eye(nobs)
-    #    #Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
-    #    #hpbht = np.dot(hxprime.T, hxprime)
-    #    #C = hpbht+R; Cinv = np.linalg.inv(C)
-    #    #pbht = np.dot(kfgain, C)
-    #    #Csqrt, Csqrtinv =  symsqrtm(C)
-    #    #kfgain = np.dot(np.dot(pbht,Csqrtinv.T),np.linalg.inv(Csqrt + Rsqrt))
-    #oberr = np.sqrt((obnoise**2).sum(axis=0)/(nanals-1))
-    #print oberr.mean(), np.sqrt(oberrvar)
-    #hxprime = np.empty((nanals, nobs), xprime.dtype)
-    #for nanal in range(nanals):
-    #    hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
-    #xprime = xprime - np.dot(kfgain, hxprime[:,:,np.newaxis]).T.squeeze()
     # sub sample of modulated analysis ensemble.
     enswts = np.sqrt(nanals2-1)*np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
-    enswts[nanals:,:]=0
-    #enswts = enswts/enswts.sum(axis=0)
-    xprime2[0:nanals,:] = xprime[0:nanals]
-    xprime = np.dot(enswts.T,xprime2)[0:nanals]
-    #indxens = np.random.choice(nanals2,size=nanals)
-    #xprime = np.dot(enswts.T,xprime2)[indxens]
+    # option 1, relies on fact that first nanals
+    # modulated ens members are proportional to unmodulated members 
+    # (since 1st eigenvector of localization function is a constant)
+    xprime = np.dot(enswts[0:nanals,:].T,xprime)[0:nanals]
+    # option 2, nanals random sample of nanals2 member posterior ensemble.
+    #xprime = np.dot(enswts.T,xprime2)[np.random.choice(nanals2,size=nanals)]
     return xmean, xprime
 
 def letkf(xmean,xprime,h,obs,oberrvar,obcovlocal):
