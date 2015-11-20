@@ -36,7 +36,7 @@ ntstart = 500 # time steps to spin up truth run
 ntimes = 5500 # ob times
 nens = 8 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
-verbose = False # print error stats every time if True
+verbose = True # print error stats every time if True
 dtassim = 0.1  # assimilation interval
 smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
@@ -227,6 +227,7 @@ for nassim in range(0,ntot,nsteps):
             inc = xmean - xmean_b
             inf_fact = np.sqrt(1. + \
             covinflate*(asprd/fsprd**2)*((fsprd/ensemble.members) + (2.*inc**2/(ensemble.members-1))))
+            if method == 2: inf_fact=1.0
         else:
             fstdev = np.sqrt(fsprd); astdev = np.sqrt(asprd)
             inf_fact = 1.+covinflate*(fstdev-astdev)/astdev
