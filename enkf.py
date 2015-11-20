@@ -107,8 +107,7 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal])
-    hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
-    xprime = xprime - np.dot(reducedgain, hxprime_tmp).T.squeeze()
+    xprime = xprime - np.dot(reducedgain, hxprime[:,:,np.newaxis]).T.squeeze()
     return xmean, xprime
 
 def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
@@ -131,8 +130,7 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,denkf=False):
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
-    hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
-    xprime = xprime - np.dot(kfgain, hxprime_tmp).T.squeeze()
+    xprime = xprime - np.dot(kfgain, hxprime[:,:,np.newaxis]).T.squeeze()
     return xmean, xprime
 
 def etkf(xmean,xprime,h,obs,oberrvar):
@@ -180,30 +178,32 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,denkf=False):
     painv = np.dot(np.dot(eigs,np.diag(1./evals)),eigs.T)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    # perturbed obs update of original ensemble
-    if not denkf:
-        obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
-        obnoise = obnoise - obnoise.mean(axis=0)
-    else:
-        obnoise = np.zeros((nanals,nobs))
-        kfgain = 0.5*kfgain
-        #R = oberrvar*np.eye(nobs)
-        #Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
-        #hpbht = np.dot(hxprime.T, hxprime)
-        #C = hpbht+R; Cinv = np.linalg.inv(C)
-        ##pbht = np.dot(xprime2.T, hxprime)
-        #pbht = np.dot(kfgain, C)
-        #Csqrt, Csqrtinv =  symsqrtm(C)
-        #kfgain = np.dot(np.dot(pbht,Csqrtinv.T),np.linalg.inv(Csqrt + Rsqrt))
+    # perturbed obs or deterministic update of original ensemble
+    #if not denkf:
+    #    obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+    #    obnoise = obnoise - obnoise.mean(axis=0)
+    #else:
+    #    obnoise = np.zeros((nanals,nobs))
+    #    kfgain = 0.5*kfgain
+    #    #R = oberrvar*np.eye(nobs)
+    #    #Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
+    #    #hpbht = np.dot(hxprime.T, hxprime)
+    #    #C = hpbht+R; Cinv = np.linalg.inv(C)
+    #    #pbht = np.dot(kfgain, C)
+    #    #Csqrt, Csqrtinv =  symsqrtm(C)
+    #    #kfgain = np.dot(np.dot(pbht,Csqrtinv.T),np.linalg.inv(Csqrt + Rsqrt))
     #oberr = np.sqrt((obnoise**2).sum(axis=0)/(nanals-1))
     #print oberr.mean(), np.sqrt(oberrvar)
-    hxprime = np.empty((nanals, nobs), xprime.dtype)
-    for nanal in range(nanals):
-        hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
-    hxprime_tmp = hxprime.reshape((nanals, ndim, 1))
-    xprime = xprime - np.dot(kfgain, hxprime_tmp).T.squeeze()
-    # random sample of modulated analysis ensemble.
-    #enswts = np.sqrt(nanals2-1)*np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
+    #hxprime = np.empty((nanals, nobs), xprime.dtype)
+    #for nanal in range(nanals):
+    #    hxprime[nanal] = np.dot(h,xprime[nanal]) + obnoise[nanal]
+    #xprime = xprime - np.dot(kfgain, hxprime[:,:,np.newaxis]).T.squeeze()
+    # sub sample of modulated analysis ensemble.
+    enswts = np.sqrt(nanals2-1)*np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
+    enswts[nanals:,:]=0
+    #enswts = enswts/enswts.sum(axis=0)
+    xprime2[0:nanals,:] = xprime[0:nanals]
+    xprime = np.dot(enswts.T,xprime2)[0:nanals]
     #indxens = np.random.choice(nanals2,size=nanals)
     #xprime = np.dot(enswts.T,xprime2)[indxens]
     return xmean, xprime
