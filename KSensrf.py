@@ -8,13 +8,12 @@ from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
 if len(sys.argv) < 3:
     msg="""python KSensrf.py covinflate covlocal method
 
-all variables are observed, assimilation interval is 3 time units (6*dt)
-8 ensemble members, observation error standard deviation = 0.1.
+all variables are observed, assimilation interval is 0.4,
+8 ensemble members, observation error standard deviation = 0.01,
+observation operator is 5 pt boxcar running mean.
+Model parameters: dt=dtassim=0.1,diffusion=0.05,exponent=16,N=128.
 
 time mean error and spread stats printed to standard output.
-
-covinflate:  inflation parameter (if >= 1 constant covariance inflation
-applied to prior, if < 1 relaxation to prior variance applied to posterior).
 
 covlocal:  localization distance (distance at which Gaspari-Cohn polynomial goes
 to zero).
@@ -25,24 +24,31 @@ method:  =0 for serial Potter method
          =3 for LETKF (using observation localization)
          =4 for serial Potter method with localization via modulation ensemble
          =5 for ETKF with modulation ensemble
-         =6 for serial Potter method using sqrt of localized Pb ensemble"""
+         =6 for serial Potter method using sqrt of localized Pb ensemble
+         =7 for bulk EnKF (all obs at once) with perturbed obs.
+
+covinflate1,covinflate2:  (optional) inflation parameters corresponding
+to a and b in Hodyss and Campbell.  If not specified, a=b=1."""
     raise SystemExit(msg)
 
-covinflate = float(sys.argv[1])
-corrl = float(sys.argv[2])
-method = int(sys.argv[3])
+corrl = float(sys.argv[1])
+method = int(sys.argv[2])
+covinflate1=1.; covinflate2=1.
+if len(sys.argv) > 3:
+    covinflate1 = float(sys.argv[3])
+    covinflate2 = float(sys.argv[4])
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 11000 # ob times
-nens = 8 # ensemble members
+nens = 20 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
-dtassim = 0.1  # assimilation interval
-smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
+dtassim = 0.3  # assimilation interval
+smooth_len = 0 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # other model parameters...
-dt = dtassim; diffusion = 0.05; exponent = 16; npts = 128
+dt = 0.1; diffusion = 0.05; exponent = 16; npts = 128
 
 np.random.seed(42) # fix random seed for reproducibility
 
@@ -189,8 +195,6 @@ for nassim in range(0,ntot,nsteps):
     xmean = ensemble.x.mean(axis=0)
     xmean_b = xmean.copy()
     xprime = ensemble.x - xmean
-    # standard covariance inflation.
-    if covinflate > 1.: xprime = covinflate*xprime
     # calculate background error, sprd stats.
     ferr = (xmean - xtruth[nassim])**2
     if np.isnan(ferr.mean()):
@@ -220,17 +224,11 @@ for nassim in range(0,ntot,nsteps):
     if verbose:
         print nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean())
     # relaxation to prior variance inflation
-    if covinflate <= 1:
-        if covinflate == 1:
-            # Hodyss and Campbell
-            inc = xmean - xmean_b
-            inf_fact = np.sqrt(1. + \
-            covinflate*(asprd/fsprd**2)*((fsprd/ensemble.members) + (2.*inc**2/(ensemble.members-1))))
-            if method == 2: inf_fact=1.0
-        else:
-            fstdev = np.sqrt(fsprd); astdev = np.sqrt(asprd)
-            inf_fact = 1.+covinflate*(fstdev-astdev)/astdev
-        xprime *= inf_fact
+    inc = xmean - xmean_b
+    inf_fact = np.sqrt(covinflate1 + \
+    (asprd/fsprd**2)*((fsprd/ensemble.members) + covinflate2*(2.*inc**2/(ensemble.members-1))))
+    if method == 2: inf_fact=1.0
+    xprime *= inf_fact
     # run forecast model.
     ensemble.x = xmean + xprime
     for n in range(nsteps):
@@ -239,7 +237,7 @@ for nassim in range(0,ntot,nsteps):
 # print out time mean stats.
 # error and spread are normalized by observation error.
 if diverged:
-    print method,len(fcsterr),corrl,covinflate,np.nan,np.nan,neig
+    print method,len(fcsterr),corrl,covinflate1,covinflate2,np.nan,np.nan,neig
 else:
     fcsterr = np.array(fcsterr)
     fcstsprd = np.array(fcstsprd)
@@ -254,5 +252,5 @@ else:
     #plt.plot(np.arange(ndim),aerrmean,color='r',label='spread')
     #plt.legend()
     #plt.show()
-    print method,len(fcsterr),corrl,covinflate,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
+    print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
           np.sqrt(analerr.mean()),astdev,neig
