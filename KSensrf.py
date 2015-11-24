@@ -44,7 +44,7 @@ nens = 20 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 0.3  # assimilation interval
-smooth_len = 0 # smoothing interval for H operator (0 or identity obs).
+smooth_len = 10 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # other model parameters...
