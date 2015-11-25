@@ -206,14 +206,8 @@ for nassim in range(0,ntot,nsteps):
         ferrmean = ferrmean + ferr
         fcsterr.append(ferr.mean()); fcstsprd.append(fsprd.mean())
     # update state estimate.
-    # use 'bulk' ensrf for first half of spinup period.
-    #if nassim < nspinup/2:
-    #    xmean,xprime =\
-    #    ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=1,z=z)
-    #else:
-    if 1:
-        xmean,xprime =\
-        ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=method,z=z)
+    xmean,xprime =\
+    ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=method,z=z)
     # calculate analysis error, sprd stats.
     aerr = (xmean - xtruth[nassim])**2
     asprd = (xprime**2).sum(axis=0)/(ensemble.members-1)
