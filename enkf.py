@@ -1,13 +1,15 @@
 import numpy as np
 from scipy import linalg
 
-def symsqrtm(a):
+def symsqrt_psd(a, inv=False):
     """symmetric square-root of a symmetric positive definite matrix"""
     evals, eigs = linalg.eigh(a)
-    sqrtevals = np.sqrt(evals)
-    symsqrt = np.dot(np.dot(eigs,np.diag(sqrtevals)),eigs.T)
-    symsqrtinv = np.dot(np.dot(eigs,np.diag(1./sqrtevals)),eigs.T)
-    return symsqrt, symsqrtinv
+    symsqrt =  (eigs * np.sqrt(np.maximum(evals,0))).dot(eigs.T)
+    if inv:
+        inv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
+        return symsqrt, inv
+    else:
+        return symsqrt
 
 def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     """serial potter method"""
@@ -99,11 +101,15 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
     Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
     Pb = covlocal*Pb
-    C = np.dot(np.dot(h,Pb),h.T)+R
-    Cinv = linalg.inv(C)
-    Csqrt, Csqrtinv =  symsqrtm(C)
-    kfgain = np.dot(np.dot(Pb,h.T),Cinv)
-    reducedgain = np.dot(np.dot(np.dot(Pb,h.T),Csqrtinv.T),linalg.inv(Csqrt + Rsqrt))
+    D = np.dot(np.dot(h,Pb),h.T)+R
+    #Dinv = linalg.cho_solve(linalg.cho_factor(D),np.eye(nobs))
+    #Dsqrt = symsqrt_psd(D,inv=False)
+    Dsqrt,Dinv = symsqrt_psd(D,inv=True)
+    kfgain = np.dot(np.dot(Pb,h.T),Dinv)
+    tmp = Dsqrt + Rsqrt
+    tmpinv = linalg.cho_solve(linalg.cho_factor(tmp),np.eye(nobs))
+    gainfact = np.dot(Dsqrt,tmpinv)
+    reducedgain = np.dot(kfgain, gainfact)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
@@ -164,27 +170,46 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
             xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
             nanal2 += 1
     xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
+    #var = ((xprime**2).sum(axis=0)/(nanals-1)).mean()
+    #var2 = ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
+    #print var,var2
     # 1st nanals members are original members multiplied by scalefact
     # (because 1st eigenvector of cov local matrix is a constant)
     scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1].max()
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
+    #hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals2):
         hxprime[nanal] = np.dot(h,xprime2[nanal])
+    #for nanal in range(nanals):
+    #    hxprime_orig[nanal] = np.dot(h,xprime[nanal])
     hxmean = np.dot(h,xmean)
-    YbRinv = np.dot(hxprime,np.eye(nobs)/oberrvar)
+
+    YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
-    # cholesky inverse.
     painv = linalg.cho_solve(linalg.cho_factor(pa),np.eye(nanals2))
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    # perturbed obs update for ensemble perturbations.
-    # make sure ob noise perturbations have right variance and zero mean.
-    obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
-    obnoise_var = ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
-    obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
-    hxprime = obnoise - obnoise.mean(axis=0) + hxprime[0:nanals]/scalefact
-    xprime = xprime - np.dot(kfgain, hxprime[:,:,np.newaxis]).T.squeeze()
+    po = False
+    if po: # use perturbed obs instead deterministic EnKF for ensperts.
+        # make sure ob noise has zero mean and correct stdev.
+        obnoise =\
+        np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+        obnoise_var =\
+        ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
+        obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
+        #hxprime = hxprime + obnoise - obnoise.mean(axis=0)
+        hxprime = obnoise - obnoise.mean(axis=0) + hxprime[0:nanals]/scalefact
+    else:
+        D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
+        Dsqrt = symsqrt_psd(D) # symmetric square root of pos-def sym matrix
+        tmp = Dsqrt + np.sqrt(oberrvar)*np.eye(nobs)
+        tmpinv = linalg.cho_solve(linalg.cho_factor(tmp),np.eye(nobs))
+        gainfact = np.dot(Dsqrt,tmpinv)
+        kfgain = np.dot(kfgain, gainfact)
+        hxprime = hxprime[0:nanals]/scalefact
+    xprime = xprime - np.dot(kfgain,hxprime.T).T
+
     return xmean, xprime
 
 def letkf(xmean,xprime,h,obs,oberrvar,obcovlocal):
