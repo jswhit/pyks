@@ -20,7 +20,7 @@ class KS(object):
     # (exponent=4 is uxxxx diffusion, exponent=8 or 16 also work, but
     # diffusion coefficient must be reduced to maintain numerical stability)
     #
-    def __init__(self,L=16,N=128,dt=1.0,exponent=4,diffusion=1.0,members=1):
+    def __init__(self,L=16,N=128,dt=0.5,exponent=4,diffusion=1.0,members=1):
         self.L = L
         self.n = N
         self.members = members

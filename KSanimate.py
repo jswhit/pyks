@@ -5,7 +5,7 @@ import matplotlib.animation as animation
 
 L   = 16           # domain is 0 to 2.*np.pi*L
 N   = 128          # number of collocation points
-dt  = 1.0          # time step
+dt  = 0.5          # time step
 diffusion = 1.0; exponent = 4
 ks = KS(L=L,diffusion=diffusion,exponent=exponent,N=N,dt=dt) # instantiate model
 

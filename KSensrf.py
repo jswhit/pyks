@@ -8,10 +8,10 @@ from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
 if len(sys.argv) < 3:
     msg="""python KSensrf.py covinflate covlocal method
 
-all variables are observed, assimilation interval is 0.4,
-8 ensemble members, observation error standard deviation = 0.01,
-observation operator is 5 pt boxcar running mean.
-Model parameters: dt=dtassim=0.1,diffusion=0.05,exponent=16,N=128.
+all variables are observed, assimilation interval given by dtassim,
+nens ensemble members, observation error standard deviation = oberrstdev,
+observation operator is smooth_len pt boxcar running mean.
+Model parameters: dt,diffusion,exponent,N
 
 time mean error and spread stats printed to standard output.
 
@@ -41,15 +41,15 @@ if len(sys.argv) > 3:
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 7000 # ob times
-nens = 10 # ensemble members
+nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
-dtassim = 0.3  # assimilation interval
-smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
+dtassim = 3  # assimilation interval
+smooth_len = 7 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # other model parameters...
-dt = 0.1; diffusion = 0.05; exponent = 16; npts = 128
+dt = 0.5; diffusion = 1.0; exponent = 4; npts = 128
 
 np.random.seed(42) # fix random seed for reproducibility
 
