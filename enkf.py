@@ -74,7 +74,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         # state space update
         hxens = hxprime.reshape((nanals2, 1))
         hxens_orig = hxprime_orig.reshape((nanals, 1))
-        D = (hxens**2).sum()/(nanals-1) + oberrvar
+        D = (hxens**2).sum()/(nanals2-1) + oberrvar
         gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
         pbht = (xprime2.T*hxens[:,0]).sum(axis=1)/float(nanals2-1)
         kfgain = pbht/D
