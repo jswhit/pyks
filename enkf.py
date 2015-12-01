@@ -26,11 +26,10 @@ def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
         hxmean = np.dot(h[nob],xmean)
         # state space update
         hxens = hxprime.reshape((nanals, 1))
-        hpbht = (hxens**2).sum()/(nanals-1)
-        gainfact = ((hpbht+oberrvar)/hpbht*\
-                   (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
+        D = (hxens**2).sum()/(nanals-1) + oberrvar
+        gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
         pbht = (xprime.T*hxens[:,0]).sum(axis=1)/float(nanals-1)
-        kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
+        kfgain = covlocal[nob,:]*pbht/D
         xmean = xmean + kfgain*(ob-hxmean)
         xprime = xprime - gainfact*kfgain*hxens
     return xmean, xprime
@@ -75,19 +74,17 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         # state space update
         hxens = hxprime.reshape((nanals2, 1))
         hxens_orig = hxprime_orig.reshape((nanals, 1))
-        hpbht = (hxens**2).sum()/(nanals2-1)
-        gainfact = ((hpbht+oberrvar)/hpbht*\
-                   (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
+        D = (hxens**2).sum()/(nanals-1) + oberrvar
+        gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
         pbht = (xprime2.T*hxens[:,0]).sum(axis=1)/float(nanals2-1)
-        kfgain = pbht/(hpbht+oberrvar)
+        kfgain = pbht/D
         xmean = xmean + kfgain*(ob-hxmean)
         xprime2 = xprime2 - gainfact*kfgain*hxens
         if not update_xprime:
-            hpbht = (hxens_orig**2).sum()/(nanals-1)
-            gainfact = ((hpbht+oberrvar)/hpbht*\
-                       (1.-np.sqrt(oberrvar/(hpbht+oberrvar))))
+            D = (hxens_orig**2).sum()/(nanals-1) + oberrvar
+            gainfact = np.sqrt(D)/(np.sqrt(D)+np.sqrt(oberrvar))
             pbht = (xprime.T*hxens_orig[:,0]).sum(axis=1)/float(nanals-1)
-            kfgain = covlocal[nob,:]*pbht/(hpbht+oberrvar)
+            kfgain = covlocal[nob,:]*pbht/D
         xprime  = xprime  - gainfact*kfgain*hxens_orig
     #print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
     #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
