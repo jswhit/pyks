@@ -39,12 +39,12 @@ if len(sys.argv) > 3:
     covinflate2 = float(sys.argv[4])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 11000 # ob times
-nens = 20 # ensemble members
+ntimes = 10000 # ob times
+nens = 10 # ensemble members
 oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 0.3  # assimilation interval
-smooth_len = 10 # smoothing interval for H operator (0 or identity obs).
+smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # other model parameters...
@@ -108,7 +108,7 @@ nspinup = ntstart
 for n in range(ntstart):
     ensemble.advance()
 
-nsteps = int(dtassim/model.dt) # time steps in assimilation interval
+nsteps = int(np.round(dtassim/model.dt)) # time steps in assimilation interval
 if verbose:
     print 'ntstart, nspinup, ntot, nsteps =',ntstart,nspinup,ntot,nsteps
 if nsteps % 1  != 0:

@@ -190,7 +190,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     painv = linalg.cho_solve(linalg.cho_factor(pa),np.eye(nanals2))
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    po = False
+    po = True
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
         # make sure ob noise has zero mean and correct stdev.
         obnoise =\
