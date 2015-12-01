@@ -24,8 +24,9 @@ method:  =0 for serial Potter method
          =3 for LETKF (using observation localization)
          =4 for serial Potter method with localization via modulation ensemble
          =5 for ETKF with modulation ensemble
-         =6 for serial Potter method using sqrt of localized Pb ensemble
-         =7 for bulk EnKF (all obs at once) with perturbed obs.
+         =6 for ETKF with modulation ensemble and perturbed obs
+         =7 for serial Potter method using sqrt of localized Pb ensemble
+         =8 for bulk EnKF (all obs at once) with perturbed obs.
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1."""
@@ -39,9 +40,9 @@ if len(sys.argv) > 3:
     covinflate2 = float(sys.argv[4])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 10000 # ob times
+ntimes = 7000 # ob times
 nens = 10 # ensemble members
-oberrstdev = 0.01; oberrvar = oberrstdev**2 # ob error
+oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 0.3  # assimilation interval
 smooth_len = 2 # smoothing interval for H operator (0 or identity obs).
@@ -129,9 +130,11 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 5: # etkf using 'modulated' ensemble
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
-    elif method == 6: # serial ensrf using sqrt of localized Pb
+    elif method == 6: # etkf using 'modulated' ensemble w/pert obs
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=True)
+    elif method == 7: # serial ensrf using sqrt of localized Pb
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,None)
-    elif method == 7: # enkf with perturbed obs all at once
+    elif method == 8: # enkf with perturbed obs all at once
         return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal)
     else:
         raise ValueError('illegal value for enkf method flag')
@@ -159,7 +162,7 @@ if corrl < 2*ndim:
             covlocal[j,i]=taper
 
 # compute square root of covlocal
-if method in [4,5]:
+if method in [4,5,6]:
     evals, eigs = np.linalg.eigh(covlocal)
     evals = np.where(evals > 1.e-10, evals, 1.e-10)
     evalsum = evals.sum(); neig = 0

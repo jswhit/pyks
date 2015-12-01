@@ -99,8 +99,6 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
     Pb = covlocal*Pb
     D = np.dot(np.dot(h,Pb),h.T)+R
-    #Dinv = linalg.cho_solve(linalg.cho_factor(D),np.eye(nobs))
-    #Dsqrt = symsqrt_psd(D,inv=False)
     Dsqrt,Dinv = symsqrt_psd(D,inv=True)
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     tmp = Dsqrt + Rsqrt
@@ -154,7 +152,7 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     xprime = np.dot(enswts.T,xprime)
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
     """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -187,7 +185,6 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     painv = linalg.cho_solve(linalg.cho_factor(pa),np.eye(nanals2))
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    po = True
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
         # make sure ob noise has zero mean and correct stdev.
         obnoise =\
