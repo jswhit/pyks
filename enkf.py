@@ -12,6 +12,14 @@ def symsqrt_psd(a, inv=False):
     else:
         return symsqrt
 
+def symsqrtinv_psd(a):
+    """inverse and inverse symmetric square-root of a symmetric positive
+    definite matrix"""
+    evals, eigs = eigh(a)
+    symsqrtinv =  (eigs * (1./np.sqrt(np.maximum(evals,0)))).dot(eigs.T)
+    inv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
+    return symsqrtinv, inv
+
 def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
@@ -144,11 +152,9 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     Rinv = (1./oberrvar)*np.eye(nobs)
     YbRinv = np.dot(hxprime,Rinv)
     pa = (nanals-1)*np.eye(nanals)+np.dot(YbRinv,hxprime.T)
-    evals, eigs = eigh(pa)
-    # make square root symmetric.
-    painv = np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
-    kfgain = np.dot(xprime.T,np.dot(np.dot(painv,painv.T),YbRinv))
-    enswts = np.sqrt(nanals-1)*painv
+    pasqrt_inv, painv = symsqrtinv_psd(pa)
+    kfgain = np.dot(xprime.T,np.dot(painv,YbRinv))
+    enswts = np.sqrt(nanals-1)*pasqrt_inv
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     xprime = np.dot(enswts.T,xprime)
     return xmean, xprime
