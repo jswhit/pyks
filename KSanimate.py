@@ -5,9 +5,8 @@ import matplotlib.animation as animation
 
 L   = 16           # domain is 0 to 2.*np.pi*L
 N   = 128          # number of collocation points
-dt  = 0.1          # time step
-diffusion = 0.05
-exponent = 16
+dt  = 1.0          # time step
+diffusion = 1.0; exponent = 4
 ks = KS(L=L,diffusion=diffusion,exponent=exponent,N=N,dt=dt) # instantiate model
 
 # define initial condition
@@ -26,7 +25,7 @@ x = np.arange(N)
 fig, ax = plt.subplots()
 line, = ax.plot(x, ks.x.squeeze())
 ax.set_xlim(0,N-1)
-ax.set_ylim(-30,30)
+ax.set_ylim(-3,3)
 #Init only required for blitting to give a clean slate.
 def init():
     global line
@@ -65,8 +64,9 @@ plt.colorbar()
 plt.title('chaotic solution of the K-S equation')
 
 plt.figure()
-plt.plot(ks.wavenums[0:N/2],vspec[0:N/2])
+plt.loglog(ks.wavenums,vspec)
 plt.title('variance spectrum')
-plt.xlim(1,60)
+plt.ylim(0.001,10000)
+plt.xlim(0,100)
 
 plt.show()
