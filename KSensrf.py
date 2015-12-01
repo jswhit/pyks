@@ -234,7 +234,7 @@ for nassim in range(0,ntot,nsteps):
 # print out time mean stats.
 # error and spread are normalized by observation error.
 if diverged:
-    print method,len(fcsterr),corrl,covinflate1,covinflate2,np.nan,np.nan,neig
+    print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.nan,np.nan,np.nan,np.nan,neig
 else:
     fcsterr = np.array(fcsterr)
     fcstsprd = np.array(fcstsprd)
