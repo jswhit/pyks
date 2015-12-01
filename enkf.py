@@ -1,5 +1,5 @@
 import numpy as np
-from numpy.linalg import eigh
+from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
 from scipy.linalg import cho_solve, cho_factor
 
 def symsqrt_psd(a, inv=False):
