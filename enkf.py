@@ -1,9 +1,10 @@
 import numpy as np
-from scipy import linalg
+from numpy.linalg import eigh
+from scipy.linalg import cho_solve, cho_factor
 
 def symsqrt_psd(a, inv=False):
     """symmetric square-root of a symmetric positive definite matrix"""
-    evals, eigs = linalg.eigh(a)
+    evals, eigs = eigh(a)
     symsqrt =  (eigs * np.sqrt(np.maximum(evals,0))).dot(eigs.T)
     if inv:
         inv =  (eigs * (1./np.maximum(evals,0))).dot(eigs.T)
@@ -44,7 +45,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
     if z is None:
         # set ensemble to square root of localized Pb
         Pb = covlocal*np.dot(xprime.T,xprime)/(nanals-1)
-        evals, eigs = linalg.eigh(Pb)
+        evals, eigs = eigh(Pb)
         evals = np.where(evals > 1.e-10, evals, 1.e-10)
         nanals2 = eigs.shape[0]
         xprime2 = np.sqrt(nanals2-1)*(eigs*np.sqrt(evals)).T
@@ -102,7 +103,7 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     Dsqrt,Dinv = symsqrt_psd(D,inv=True)
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     tmp = Dsqrt + Rsqrt
-    tmpinv = linalg.cho_solve(linalg.cho_factor(tmp),np.eye(nobs))
+    tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
     gainfact = np.dot(Dsqrt,tmpinv)
     reducedgain = np.dot(kfgain, gainfact)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
@@ -119,9 +120,9 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal):
     Rsqrt = np.sqrt(oberrvar)*np.eye(nobs)
     Pb = np.dot(np.transpose(xprime),xprime)/(nanals-1)
     Pb = covlocal*Pb
-    C = np.dot(np.dot(h,Pb),h.T)+R
-    Cinv = linalg.inv(C)
-    kfgain = np.dot(np.dot(Pb,h.T),Cinv)
+    D = np.dot(np.dot(h,Pb),h.T)+R
+    Dinv = cho_solve(cho_factor(C),np.eye(nobs))
+    kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
     obnoise_var = ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
@@ -143,7 +144,7 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     Rinv = (1./oberrvar)*np.eye(nobs)
     YbRinv = np.dot(hxprime,Rinv)
     pa = (nanals-1)*np.eye(nanals)+np.dot(YbRinv,hxprime.T)
-    evals, eigs = linalg.eigh(pa)
+    evals, eigs = eigh(pa)
     # make square root symmetric.
     painv = np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
     kfgain = np.dot(xprime.T,np.dot(np.dot(painv,painv.T),YbRinv))
@@ -182,7 +183,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
 
     YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
-    painv = linalg.cho_solve(linalg.cho_factor(pa),np.eye(nanals2))
+    painv = cho_solve(cho_factor(pa),np.eye(nanals2))
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
@@ -198,7 +199,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
         Dsqrt = symsqrt_psd(D) # symmetric square root of pos-def sym matrix
         tmp = Dsqrt + np.sqrt(oberrvar)*np.eye(nobs)
-        tmpinv = linalg.cho_solve(linalg.cho_factor(tmp),np.eye(nobs))
+        tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
         gainfact = np.dot(Dsqrt,tmpinv)
         kfgain = np.dot(kfgain, gainfact)
         hxprime = hxprime[0:nanals]/scalefact
@@ -223,7 +224,7 @@ def letkf(xmean,xprime,h,obs,oberrvar,obcovlocal):
         Rinv = np.diag(obcovlocal[n,:]/oberrvar)
         YbRinv = np.dot(hxprime,Rinv)
         pa = (nanals-1)*np.eye(nanals)+np.dot(YbRinv,hxprime.T)
-        evals, eigs = linalg.eigh(pa)
+        evals, eigs = eigh(pa)
         painv = np.dot(np.dot(eigs,np.diag(np.sqrt(1./evals))),eigs.T)
         kfgain = np.dot(xprime_prior[:,n].T,np.dot(np.dot(painv,painv.T),YbRinv))
         enswts = np.sqrt(nanals-1)*painv
