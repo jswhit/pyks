@@ -219,7 +219,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         xprime = xprime2[0:nanals]/scalefact
         # this is equivalent, but a little faster
         #xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
-        # use random sample of posterior, rescaled (doesn't work)
+        # use random sample of modulated ens posterior perts, rescaled (doesn't work)
         #ix = np.random.choice(np.arange(nanals2),size=nanals)
         #xprime = xprime2[ix]
 
