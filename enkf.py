@@ -211,7 +211,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         #kfgain = np.dot(kfgain, gainfact)
         #hxprime = hxprime[0:nanals]/scalefact
         #xprime = xprime - np.dot(kfgain,hxprime.T).T
-        # use subset of ETKF weights to update perts (faster)
+        # update modulated ensemble perts with ETKF weights
         pasqrt_inv, painv = symsqrtinv_psd(pa)
         enswts = np.sqrt(nanals2-1)*pasqrt_inv
         xprime2 = np.dot(enswts.T,xprime2)
