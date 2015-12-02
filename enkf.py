@@ -189,7 +189,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
 
     YbRinv = np.dot(hxprime,(1./oberrvar)*np.eye(nobs))
     pa = (nanals2-1)*np.eye(nanals2)+np.dot(YbRinv,hxprime.T)
-    painv = cho_solve(cho_factor(pa),np.eye(nanals2))
+    pasqrt_inv, painv = symsqrtinv_psd(pa)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
@@ -199,17 +199,22 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         obnoise_var =\
         ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
         obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
-        #hxprime = hxprime + obnoise - obnoise.mean(axis=0)
         hxprime = obnoise - obnoise.mean(axis=0) + hxprime[0:nanals]/scalefact
+        xprime = xprime - np.dot(kfgain,hxprime.T).T
     else:
-        D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
-        Dsqrt = symsqrt_psd(D) # symmetric square root of pos-def sym matrix
-        tmp = Dsqrt + np.sqrt(oberrvar)*np.eye(nobs)
-        tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
-        gainfact = np.dot(Dsqrt,tmpinv)
-        kfgain = np.dot(kfgain, gainfact)
-        hxprime = hxprime[0:nanals]/scalefact
-    xprime = xprime - np.dot(kfgain,hxprime.T).T
+        # compute reduced gain to update perts
+        #D = np.dot(hxprime.T, hxprime)/(nanals2-1) + oberrvar*np.eye(nobs)
+        #Dsqrt = symsqrt_psd(D) # symmetric square root of pos-def sym matrix
+        #tmp = Dsqrt + np.sqrt(oberrvar)*np.eye(nobs)
+        #tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
+        #gainfact = np.dot(Dsqrt,tmpinv)
+        #kfgain = np.dot(kfgain, gainfact)
+        #hxprime = hxprime[0:nanals]/scalefact
+        #xprime = xprime - np.dot(kfgain,hxprime.T).T
+        # use subset of ETKF weights to update perts (faster)
+        pasqrt_inv, painv = symsqrtinv_psd(pa)
+        enswts = np.sqrt(nanals2-1)*pasqrt_inv
+        xprime = np.dot(enswts[:,0:nanals].T,xprime2/scalefact)
 
     return xmean, xprime
 
