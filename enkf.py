@@ -214,7 +214,14 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         # use subset of ETKF weights to update perts (faster)
         pasqrt_inv, painv = symsqrtinv_psd(pa)
         enswts = np.sqrt(nanals2-1)*pasqrt_inv
-        xprime = np.dot(enswts[:,0:nanals].T,xprime2/scalefact)
+        xprime2 = np.dot(enswts.T,xprime2)
+        # just use 1st nanals posterior members, rescaled.
+        xprime = xprime2[0:nanals]/scalefact
+        # this is equivalent, but a little faster
+        #xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
+        # use random sample of posterior, rescaled (doesn't work)
+        #ix = np.random.choice(np.arange(nanals2),size=nanals)
+        #xprime = xprime2[ix]
 
     return xmean, xprime
 
