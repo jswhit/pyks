@@ -49,12 +49,16 @@ nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 3  # assimilation interval
-smooth_len = 5 # smoothing interval for H operator (0 or identity obs).
-gaussian = False # Gaussian or running average smoothing in H.
+# smoothing interval for H operator (0 or identity obs).
+smooth_len = 5
+# Gaussian or running average smoothing in H.
+# for running average, smooth_len is half-width of boxcar.
+# for gussian, smooth_len is standard deviation.
+gaussian = True
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
-diffusion_truth = 0.75; exponent_truth = 4
+diffusion_truth = 0.8; exponent_truth = 4
 # for forecast model (same as above for perfect model expt)
 # for simplicity, assume dt and npts stay the same.
 dt = 0.5; diffusion = 1.0; exponent = 4; npts = 128
@@ -98,7 +102,7 @@ if smooth_len > 0:
             if i-j > (ndim/2): rr = float(i-ndim-j)
             r = np.fabs(rr)/smooth_len
             if gaussian:
-                h[j,i] = np.exp(-r**2/0.15) # Gaussian
+                h[j,i] = np.exp(-r**2) # Gaussian
             else: # running average (heaviside kernel)
                 if r <= 1:
                     h[j,i] = 1.
