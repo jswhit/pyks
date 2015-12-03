@@ -23,12 +23,6 @@ def symsqrtinv_psd(a):
 def serial_ensrf(xmean,xprime,h,obs,oberrvar,covlocal,obcovlocal):
     """serial potter method"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
-    #hxmean = np.dot(h,xmean)
-    #import matplotlib.pyplot as plt
-    #plt.plot(np.arange(ndim),xmean)
-    #plt.plot(np.arange(ndim),hxmean)
-    #plt.show()
-    #raise SystemExit
     for nob,ob in zip(np.arange(nobs),obs):
         # forward operator.
         hxprime = np.dot(xprime,h[nob])
@@ -63,15 +57,10 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         xprime2 = np.zeros((nanals2,ndim),xprime.dtype)
         for j in range(neig):
             for nanal in range(nanals):
-                #print j,nanal,z[neig-j-1,:].min(), z[neig-j-1,:].max()
                 xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
                 # unmodulated member is j=1, scaled by z[-1] (a constant)
                 nanal2 += 1
         xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
-    #print xprime2.shape
-    #print ((xprime**2).sum(axis=0)/(nanals-1)).sum()
-    #print ((xprime2**2).sum(axis=0)/(nanals2-1)).sum()
-    #raise SystemExit
 
     # update xmean using full xprime2
     # update original xprime using gain from full xprime2
@@ -95,9 +84,6 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
             pbht = (xprime.T*hxens_orig[:,0]).sum(axis=1)/float(nanals-1)
             kfgain = covlocal[nob,:]*pbht/D
         xprime  = xprime  - gainfact*kfgain*hxens_orig
-    #print ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
-    #print ((xprime**2).sum(axis=0)/(nanals-1)).mean()
-    #raise SystemExit
     return xmean, xprime
 
 def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
@@ -174,7 +160,6 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
     xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
     #var = ((xprime**2).sum(axis=0)/(nanals-1)).mean()
     #var2 = ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
-    #print var,var2
     # 1st nanals members are original members multiplied by scalefact
     # (because 1st eigenvector of cov local matrix is a constant)
     scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1].max()
