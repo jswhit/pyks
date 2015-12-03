@@ -29,13 +29,17 @@ method:  =0 for serial Potter method
          =8 for bulk EnKF (all obs at once) with perturbed obs.
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
-to a and b in Hodyss and Campbell.  If not specified, a=b=1."""
+to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
+<=0, relaxation to prior spread (RTPS) inflation used with a relaxation
+coefficient equal to covinflate1."""
     raise SystemExit(msg)
 
 corrl = float(sys.argv[1])
 method = int(sys.argv[2])
 covinflate1=1.; covinflate2=1.
 if len(sys.argv) > 3:
+    # if covinflate2 > 0, use Hodyss and Campbell inflation,
+    # otherwise use RTPS inflation.
     covinflate1 = float(sys.argv[3])
     covinflate2 = float(sys.argv[4])
 
@@ -45,17 +49,21 @@ nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 3  # assimilation interval
-smooth_len = 7 # smoothing interval for H operator (0 or identity obs).
+smooth_len = 5 # smoothing interval for H operator (0 or identity obs).
 gaussian = False # Gaussian or running average smoothing in H.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
-# other model parameters...
+# model parameters...
+# for truth run
+diffusion_truth = 0.75; exponent_truth = 4
+# for forecast model (same as above for perfect model expt)
+# for simplicity, assume dt and npts stay the same.
 dt = 0.5; diffusion = 1.0; exponent = 4; npts = 128
 
 np.random.seed(42) # fix random seed for reproducibility
 
 # model instance for truth (nature) run
-model = KS(N=npts,dt=dt,exponent=exponent,diffusion=diffusion)
-# mode instance for ensemble
+model = KS(N=npts,dt=dt,exponent=exponent_truth,diffusion=diffusion_truth)
+# mode instance for forecast ensemble
 ensemble = KS(N=npts,members=nens,dt=dt,exponent=exponent,diffusion=diffusion)
 for nt in range(ntstart): # spinup truth run
     model.advance()
@@ -220,16 +228,20 @@ for nassim in range(0,ntot,nsteps):
         analerr.append(aerr.mean()); analsprd.append(asprd.mean())
     if verbose:
         print nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean())
-    # relaxation to prior variance inflation
-    inc = xmean - xmean_b
-    inf_fact = np.sqrt(covinflate1 + \
-    (asprd/fsprd**2)*((fsprd/ensemble.members) + covinflate2*(2.*inc**2/(ensemble.members-1))))
-    if method == 2: inf_fact=1.0
+    if covinflate2 > 0:
+        # Hodyss and Campbell inflation.
+        inc = xmean - xmean_b
+        inf_fact = np.sqrt(covinflate1 + \
+        (asprd/fsprd**2)*((fsprd/ensemble.members) + covinflate2*(2.*inc**2/(ensemble.members-1))))
+    else:
+        # relaxation to prior spread inflation
+        asprd = np.sqrt(asprd); fsprd = np.sqrt(fsprd)
+        inf_fact = 1.+covinflate1*(fsprd-asprd)/asprd
     xprime *= inf_fact
     # run forecast model.
     ensemble.x = xmean + xprime
     for n in range(nsteps):
-        ensemble.advance() # perfect model
+        ensemble.advance()
 
 # print out time mean stats.
 # error and spread are normalized by observation error.
