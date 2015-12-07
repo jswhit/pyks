@@ -36,12 +36,13 @@ coefficient equal to covinflate1."""
 
 corrl = float(sys.argv[1])
 method = int(sys.argv[2])
+use_gaussian = bool(int(sys.argv[3]))
 covinflate1=1.; covinflate2=1.
-if len(sys.argv) > 3:
+if len(sys.argv) > 4:
     # if covinflate2 > 0, use Hodyss and Campbell inflation,
     # otherwise use RTPS inflation.
-    covinflate1 = float(sys.argv[3])
-    covinflate2 = float(sys.argv[4])
+    covinflate1 = float(sys.argv[4])
+    covinflate2 = float(sys.argv[5])
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 7000 # ob times
@@ -49,19 +50,26 @@ nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 3  # assimilation interval
-# smoothing interval for H operator (0 or identity obs).
-smooth_len = 5
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
 # for gussian, smooth_len is standard deviation.
-gaussian = True
+if use_gaussian:
+    gaussian = True
+else:
+    gaussian = False
+# smoothing interval for H operator (0 or identity obs).
+if gaussian:
+    smooth_len = 5 # for Gaussian
+else:
+    smooth_len = 7 # for uniform
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
-diffusion_truth = 0.8; exponent_truth = 4
+diffusion_truth = 1.0; exponent_truth = 4
 # for forecast model (same as above for perfect model expt)
 # for simplicity, assume dt and npts stay the same.
-dt = 0.5; diffusion = 1.0; exponent = 4; npts = 128
+#dt = 0.5; diffusion = 0.85; exponent = exponent_truth; npts = 128
+dt = 0.5; diffusion = diffusion_truth; exponent = exponent_truth; npts = 128
 
 np.random.seed(42) # fix random seed for reproducibility
 
@@ -202,9 +210,12 @@ analerr = []
 analsprd = []
 diverged = False
 fsprdmean = np.zeros(ndim,np.float)
+fsprdobmean = np.zeros(ndim,np.float)
 asprdmean = np.zeros(ndim,np.float)
 ferrmean = np.zeros(ndim,np.float)
 aerrmean = np.zeros(ndim,np.float)
+corrmean = np.zeros(ndim,np.float)
+corrhmean = np.zeros(ndim,np.float)
 for nassim in range(0,ntot,nsteps):
     # assimilate obs
     xmean = ensemble.x.mean(axis=0)
@@ -216,8 +227,15 @@ for nassim in range(0,ntot,nsteps):
         diverged = True
         break
     fsprd = (xprime**2).sum(axis=0)/(ensemble.members-1)
+    corr = (xprime.T*xprime[:,ndim/2]).sum(axis=1)/float(ensemble.members-1)
+    hxprime = np.dot(xprime,h)
+    fsprdob = (hxprime**2).sum(axis=0)/(ensemble.members-1)
+    corrh = (xprime.T*hxprime[:,ndim/2]).sum(axis=1)/float(ensemble.members-1)
     if nassim >= nspinup:
         fsprdmean = fsprdmean + fsprd
+        fsprdobmean = fsprdobmean + fsprdob
+        corrmean = corrmean + corr
+        corrhmean = corrhmean + corrh
         ferrmean = ferrmean + ferr
         fcsterr.append(ferr.mean()); fcstsprd.append(fsprd.mean())
     # update state estimate.
@@ -260,9 +278,16 @@ else:
     astdev = np.sqrt(analsprd.mean())
     asprdmean = asprdmean/len(fcstsprd)
     aerrmean = aerrmean/len(analerr)
+    fstd = np.sqrt(fsprdmean)
+    fstdob = np.sqrt(fsprdobmean)
+    corrmean = corrmean/(fstd*fstd[ndim/2])
+    corrhmean = corrhmean/(fstd*fstdob[ndim/2])
     #import matplotlib.pyplot as plt
-    #plt.plot(np.arange(ndim),asprdmean,color='b',label='error')
-    #plt.plot(np.arange(ndim),aerrmean,color='r',label='spread')
+    #plt.plot(np.arange(ndim),corrmean,color='k',label='r')
+    #plt.plot(np.arange(ndim),corrhmean,color='b',label='r (x vs hx)')
+    #plt.plot(np.arange(ndim),h[:,ndim/2]/h.max(),color='r',label='H')
+    #plt.plot(np.arange(ndim),covlocal[:,ndim/2],'k:',label='L')
+    #plt.xlim(0,ndim)
     #plt.legend()
     #plt.show()
     print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
