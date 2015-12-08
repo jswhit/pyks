@@ -11,8 +11,7 @@ if len(sys.argv) < 3:
 
 all variables are observed, assimilation interval given by dtassim,
 nens ensemble members, observation error standard deviation = oberrstdev,
-observation operator is smooth_len pt boxcar running mean.
-Model parameters: dt,diffusion,exponent,N
+observation operator is smooth_len pt boxcar running mean or gaussian.
 
 time mean error and spread stats printed to standard output.
 
@@ -47,7 +46,7 @@ if len(sys.argv) > 5:
     covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 7000 # ob times
+ntimes = 21000 # ob times
 nens = 10 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
@@ -58,18 +57,19 @@ dtassim = 1  # assimilation interval
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
+dt = 0.5; npts = 128
 diffusion_truth = 1.0; exponent_truth = 4
 # for forecast model (same as above for perfect model expt)
 # for simplicity, assume dt and npts stay the same.
-#dt = 0.5; diffusion = 0.85; exponent = exponent_truth; npts = 128
-dt = 0.5; diffusion = diffusion_truth; exponent = exponent_truth; npts = 128
+#diffusion = 0.85
+diffusion = diffusion_truth
 
 np.random.seed(42) # fix random seed for reproducibility
 
 # model instance for truth (nature) run
-model = KS(N=npts,dt=dt,exponent=exponent_truth,diffusion=diffusion_truth)
+model = KS(N=npts,dt=dt,diffusion=diffusion_truth)
 # mode instance for forecast ensemble
-ensemble = KS(N=npts,members=nens,dt=dt,exponent=exponent,diffusion=diffusion)
+ensemble = KS(N=npts,members=nens,dt=dt,diffusion=diffusion)
 for nt in range(ntstart): # spinup truth run
     model.advance()
 
