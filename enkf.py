@@ -107,7 +107,7 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     xprime = xprime - np.dot(reducedgain, hxprime[:,:,np.newaxis]).T.squeeze()
     return xmean, xprime
 
-def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal):
+def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rs):
     """bulk enkf method with perturbed obs"""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     R = oberrvar*np.eye(nobs)
@@ -118,7 +118,7 @@ def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal):
     Dinv = cho_solve(cho_factor(C),np.eye(nobs))
     kfgain = np.dot(np.dot(Pb,h.T),Dinv)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
-    obnoise = np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+    obnoise = np.sqrt(oberrvar)*rs.standard_normal(size=(nanals,nobs))
     obnoise_var = ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
     obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
     hxprime = np.empty((nanals, nobs), xprime.dtype)
@@ -145,7 +145,7 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     xprime = np.dot(enswts.T,xprime)
     return xmean, xprime
 
-def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
+def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     """ETKF with modulated ensemble."""
     nanals, ndim = xprime.shape; nobs = obs.shape[-1]
     if z is None:
@@ -178,9 +178,11 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRinv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     if po: # use perturbed obs instead deterministic EnKF for ensperts.
+        if rs is None:
+            raise ValueError('must pass random state if po=True')
         # make sure ob noise has zero mean and correct stdev.
         obnoise =\
-        np.sqrt(oberrvar)*np.random.standard_normal(size=(nanals,nobs))
+        np.sqrt(oberrvar)*rs.standard_normal(size=(nanals,nobs))
         obnoise_var =\
         ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
         obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
@@ -205,7 +207,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,po=False):
         # this is equivalent, but a little faster
         #xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
         # use random sample of modulated ens posterior perts, rescaled (doesn't work)
-        #ix = np.random.choice(np.arange(nanals2),size=nanals)
+        #ix = rs.random.choice(np.arange(nanals2),size=nanals)
         #xprime = xprime2[ix]
 
     return xmean, xprime

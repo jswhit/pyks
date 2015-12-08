@@ -20,7 +20,7 @@ class KS(object):
     # (exponent=4 is uxxxx diffusion, exponent=8 or 16 also work, but
     # diffusion coefficient must be reduced to maintain numerical stability)
     #
-    def __init__(self,L=16,N=128,dt=0.5,exponent=4,diffusion=1.0,members=1):
+    def __init__(self,L=16,N=128,dt=0.5,exponent=4,diffusion=1.0,members=1,rs=None):
         self.L = L
         self.n = N
         self.members = members
@@ -33,7 +33,9 @@ class KS(object):
         self.ik    = 1j*k              # spectral derivative operator
         self.lin   = k**2 - diffusion*(k**exponent)  # Fourier multipliers for linear term
         # random noise initial condition.
-        x = 0.01*np.random.standard_normal(size=(members,N))
+        if rs is None:
+            rs = np.random.RandomState()
+        x = 0.01*rs.standard_normal(size=(members,N))
         # remove zonal mean from initial condition.
         self.x = x - x.mean()
         # spectral space variable
