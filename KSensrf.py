@@ -50,7 +50,7 @@ ntimes = 21000 # ob times
 nens = 10 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
-dtassim = 1  # assimilation interval
+dtassim = 1 # assimilation interval
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
 # for gaussian, smooth_len is standard deviation.
@@ -122,7 +122,7 @@ nspinup = ntstart
 for n in range(ntstart):
     ensemble.advance()
 
-nsteps = int(np.round(dtassim/model.dt)) # time steps in assimilation interval
+nsteps = np.int(dtassim/model.dt) # time steps in assimilation interval
 if verbose:
     print 'ntstart, nspinup, ntot, nsteps =',ntstart,nspinup,ntot,nsteps
 if nsteps % 1  != 0:
