@@ -4,6 +4,7 @@ import sys
 from KS import KS
 from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
                  serial_ensrf_modens, bulk_enkf
+np.seterr(all='raise') # raise error when overflow occurs
 
 if len(sys.argv) < 3:
     msg="""python KSensrf.py covinflate covlocal method
@@ -36,32 +37,24 @@ coefficient equal to covinflate1."""
 
 corrl = float(sys.argv[1])
 method = int(sys.argv[2])
-use_gaussian = bool(int(sys.argv[3]))
+smooth_len = int(sys.argv[3])
+use_gaussian = bool(int(sys.argv[4]))
 covinflate1=1.; covinflate2=1.
-if len(sys.argv) > 4:
+if len(sys.argv) > 5:
     # if covinflate2 > 0, use Hodyss and Campbell inflation,
     # otherwise use RTPS inflation.
-    covinflate1 = float(sys.argv[4])
-    covinflate2 = float(sys.argv[5])
+    covinflate1 = float(sys.argv[5])
+    covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 7000 # ob times
-nens = 8 # ensemble members
+nens = 10 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
-dtassim = 3  # assimilation interval
+dtassim = 1  # assimilation interval
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
-# for gussian, smooth_len is standard deviation.
-if use_gaussian:
-    gaussian = True
-else:
-    gaussian = False
-# smoothing interval for H operator (0 or identity obs).
-if gaussian:
-    smooth_len = 5 # for Gaussian
-else:
-    smooth_len = 7 # for uniform
+# for gaussian, smooth_len is standard deviation.
 thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
@@ -109,7 +102,7 @@ if smooth_len > 0:
             if i-j < -(ndim/2): rr = float(ndim-j+i)
             if i-j > (ndim/2): rr = float(i-ndim-j)
             r = np.fabs(rr)/smooth_len
-            if gaussian:
+            if use_gaussian:
                 h[j,i] = np.exp(-r**2) # Gaussian
             else: # running average (heaviside kernel)
                 if r <= 1:
