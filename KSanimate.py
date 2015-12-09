@@ -6,8 +6,8 @@ import matplotlib.animation as animation
 L   = 16           # domain is 0 to 2.*np.pi*L
 N   = 128          # number of collocation points
 dt  = 0.5          # time step
-diffusion = 1.0; exponent = 4
-ks = KS(L=L,diffusion=diffusion,exponent=exponent,N=N,dt=dt) # instantiate model
+diffusion = 1.0
+ks = KS(L=L,diffusion=diffusion,N=N,dt=dt) # instantiate model
 
 # define initial condition
 #u = np.cos(x/L)*(1.0+np.sin(x/L)) # smooth IC
