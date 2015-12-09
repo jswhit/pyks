@@ -16,22 +16,18 @@ class KS(object):
     # (an unstable diffusion term),
     # cascades to short wavelengths due to the nonlinearity u*u_x, and
     # dissipates via diffusion*u_xxxx.
-    # Order of diffusion can be varied to control character of power spectrum.
-    # (exponent=4 is uxxxx diffusion, exponent=8 or 16 also work, but
-    # diffusion coefficient must be reduced to maintain numerical stability)
     #
-    def __init__(self,L=16,N=128,dt=0.5,exponent=4,diffusion=1.0,members=1,rs=None):
+    def __init__(self,L=16,N=128,dt=0.5,diffusion=1.0,members=1,rs=None):
         self.L = L
         self.n = N
         self.members = members
         self.dt = dt
         self.diffusion = diffusion
-        self.exponent = exponent
         kk = N*np.fft.fftfreq(N)[0:(N/2)+1]  # wave numbers
         self.wavenums = kk
         k  = kk.astype(np.float)/L
         self.ik    = 1j*k              # spectral derivative operator
-        self.lin   = k**2 - diffusion*(k**exponent)  # Fourier multipliers for linear term
+        self.lin   = k**2 - diffusion*k**4  # Fourier multipliers for linear term
         # random noise initial condition.
         if rs is None:
             rs = np.random.RandomState()

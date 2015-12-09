@@ -58,19 +58,19 @@ thresh = 0.99 # threshold for modulated ensemble eigenvalue truncation.
 # model parameters...
 # for truth run
 dt = 0.5; npts = 128
-diffusion_truth = 1.0; exponent_truth = 4
+diffusion_truth = 1.0
 # for forecast model (same as above for perfect model expt)
 # for simplicity, assume dt and npts stay the same.
 #diffusion = 0.85
 diffusion = diffusion_truth
 
-rsobs = np.random.RandomState(42) # fixed seed for observations
-rsics = np.random.RandomState() # varying seed for initial conditions
+rstruth = np.random.RandomState(42) # fixed seed for truth run
+rsens = np.random.RandomState() # varying seed for ob noise and ensemble initial conditions
 
 # model instance for truth (nature) run
-model = KS(N=npts,dt=dt,diffusion=diffusion_truth,rs=rsobs)
+model = KS(N=npts,dt=dt,diffusion=diffusion_truth,rs=rstruth)
 # mode instance for forecast ensemble
-ensemble = KS(N=npts,members=nens,dt=dt,diffusion=diffusion,rs=rsics)
+ensemble = KS(N=npts,members=nens,dt=dt,diffusion=diffusion,rs=rsens)
 for nt in range(ntstart): # spinup truth run
     model.advance()
 
@@ -115,7 +115,7 @@ if smooth_len > 0:
 obs = np.empty(xtruth.shape, xtruth.dtype)
 for nt in range(xtruth.shape[0]):
     obs[nt] = np.dot(h,xtruth[nt])
-obs = obs + oberrstdev*rsobs.standard_normal(size=obs.shape)
+obs = obs + oberrstdev*rsens.standard_normal(size=obs.shape)
 
 # spinup ensemble
 ntot = xtruth.shape[0]
@@ -145,11 +145,11 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
     elif method == 5: # etkf using 'modulated' ensemble
         return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z)
     elif method == 6: # etkf using 'modulated' ensemble w/pert obs
-        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsics,po=True)
+        return etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True)
     elif method == 7: # serial ensrf using sqrt of localized Pb
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,None)
     elif method == 8: # enkf with perturbed obs all at once
-        return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rsics)
+        return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rsens)
     else:
         raise ValueError('illegal value for enkf method flag')
 
