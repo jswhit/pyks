@@ -266,6 +266,7 @@ for nassim in range(0,ntot,nsteps):
 if diverged:
     print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.nan,np.nan,np.nan,np.nan,neig
 else:
+    ncount = len(fcstsprd)
     fcsterr = np.array(fcsterr)
     fcsterr1 = np.array(fcsterr1)
     fcstsprd = np.array(fcstsprd)
@@ -273,29 +274,33 @@ else:
     analsprd = np.array(analsprd)
     fstdev = np.sqrt(fcstsprd.mean())
     astdev = np.sqrt(analsprd.mean())
-    asprdmean = asprdmean/len(fcstsprd)
-    aerrmean = aerrmean/len(analerr)
+    asprdmean = asprdmean/ncount
+    aerrmean = aerrmean/ncount
+    fsprdmean = fsprdmean/ncount
+    fsprdobmean = fsprdobmean/ncount
+    corrmean = corrmean/ncount
+    corrhmean = corrhmean/ncount
     fstd = np.sqrt(fsprdmean)
     fstdob = np.sqrt(fsprdobmean)
-    corrmean = corrmean/(fstd*fstd[ndim/2])
-    corrhmean = corrhmean/(fstd*fstdob[ndim/2])
+    covmean = corrmean; corrmean = corrmean/(fstd*fstd[ndim/2])
+    covhmean = corrhmean; corrhmean = corrhmean/(fstd*fstdob[ndim/2])
     fcsterrcorr =\
     (fcsterr1.T*fcsterr1[:,ndim/2]).sum(axis=1)/float(fcsterr1.shape[0]-1)
     ferrstd = np.sqrt((fcsterr1**2).sum(axis=0)/float(fcsterr1.shape[0]-1))
+    errcovmean = fcsterrcorr
     fcsterrcorr = fcsterrcorr/(ferrstd*ferrstd[ndim/2])
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(ndim),corrmean,color='k',label='r')
     #plt.plot(np.arange(ndim),corrhmean,color='b',label='r (x vs hx)')
     #plt.plot(np.arange(ndim),h[:,ndim/2]/h.max(),color='r',label='H')
     #plt.plot(np.arange(ndim),covlocal[:,ndim/2],'k:',label='L')
-    #plt.plot(np.arange(ndim),fcsterrcorr,color='r',label='r')
     #plt.xlim(0,ndim)
     #plt.legend()
     #plt.figure()
-    #plt.plot(np.arange(ndim),corrmean,color='b',label='mean ens cov')
-    #plt.plot(np.arange(ndim),fcsterrcorr,color='r',label='ens mean errcov')
+    #plt.plot(np.arange(ndim),covmean,color='b',label='mean ens cov')
+    #plt.plot(np.arange(ndim),errcovmean,color='r',label='ens mean errcov')
     #plt.xlim(0,ndim)
     #plt.legend()
     #plt.show()
-    print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
+    print method,ncount,corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
           np.sqrt(analerr.mean()),astdev,neig
