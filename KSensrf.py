@@ -61,7 +61,7 @@ dt = 0.5; npts = 128
 diffusion_truth = 1.0
 # for forecast model (same as above for perfect model expt)
 # for simplicity, assume dt and npts stay the same.
-#diffusion = 0.85
+#diffusion = 0.9
 diffusion = diffusion_truth
 
 rstruth = np.random.RandomState(42) # fixed seed for truth run
@@ -199,6 +199,7 @@ else:
 
 # run assimilation.
 fcsterr = []
+fcsterr1 = []
 fcstsprd = []
 analerr = []
 analsprd = []
@@ -232,6 +233,7 @@ for nassim in range(0,ntot,nsteps):
         corrhmean = corrhmean + corrh
         ferrmean = ferrmean + ferr
         fcsterr.append(ferr.mean()); fcstsprd.append(fsprd.mean())
+        fcsterr1.append(xmean - xtruth[nassim])
     # update state estimate.
     xmean,xprime =\
     ensrf(ensemble,xmean,xprime,h,obs[nassim,:],oberrvar,covlocal,method=method,z=z)
@@ -265,6 +267,7 @@ if diverged:
     print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.nan,np.nan,np.nan,np.nan,neig
 else:
     fcsterr = np.array(fcsterr)
+    fcsterr1 = np.array(fcsterr1)
     fcstsprd = np.array(fcstsprd)
     analerr = np.array(analerr)
     analsprd = np.array(analsprd)
@@ -276,11 +279,21 @@ else:
     fstdob = np.sqrt(fsprdobmean)
     corrmean = corrmean/(fstd*fstd[ndim/2])
     corrhmean = corrhmean/(fstd*fstdob[ndim/2])
+    fcsterrcorr =\
+    (fcsterr1.T*fcsterr1[:,ndim/2]).sum(axis=1)/float(fcsterr1.shape[0]-1)
+    ferrstd = np.sqrt((fcsterr1**2).sum(axis=0)/float(fcsterr1.shape[0]-1))
+    fcsterrcorr = fcsterrcorr/(ferrstd*ferrstd[ndim/2])
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(ndim),corrmean,color='k',label='r')
     #plt.plot(np.arange(ndim),corrhmean,color='b',label='r (x vs hx)')
     #plt.plot(np.arange(ndim),h[:,ndim/2]/h.max(),color='r',label='H')
     #plt.plot(np.arange(ndim),covlocal[:,ndim/2],'k:',label='L')
+    #plt.plot(np.arange(ndim),fcsterrcorr,color='r',label='r')
+    #plt.xlim(0,ndim)
+    #plt.legend()
+    #plt.figure()
+    #plt.plot(np.arange(ndim),corrmean,color='b',label='mean ens cov')
+    #plt.plot(np.arange(ndim),fcsterrcorr,color='r',label='ens mean errcov')
     #plt.xlim(0,ndim)
     #plt.legend()
     #plt.show()
