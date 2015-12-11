@@ -58,7 +58,7 @@ def serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z):
         for j in range(neig):
             for nanal in range(nanals):
                 xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
-                # unmodulated member is j=1, scaled by z[-1] (a constant)
+                # unmodulated member is j=1, scaled by z[-1] 
                 nanal2 += 1
         xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
 
@@ -162,7 +162,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     #var2 = ((xprime2**2).sum(axis=0)/(nanals2-1)).mean()
     # 1st nanals members are original members multiplied by scalefact
     # (because 1st eigenvector of cov local matrix is a constant)
-    scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1].max()
+    scalefact = np.sqrt(float(nanals2-1)/float(nanals-1))*z[-1]
     # forward operator.
     hxprime = np.empty((nanals2, nobs), xprime2.dtype)
     #hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
