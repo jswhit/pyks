@@ -3,12 +3,8 @@ import numpy as np
 class KS(object):
     #
     # Solution of 1-d Kuramoto-Sivashinsky equation, the simplest
-    # PDE that exhibits spatio-temporal chaos.
-    # refs:
-    # http://people.maths.ox.ac.uk/trefethen/pdectb/kuramoto2.pdf
-    # http://www.encyclopediaofmath.org/index.php/Kuramoto-Sivashinsky_equation
-    # http://onlinelibrary.wiley.com/doi/10.1002/fld.2020/pdf
-    # http://sprott.physics.wisc.edu/pubs/paper335.pdf
+    # PDE that exhibits spatio-temporal chaos
+    # (https://www.encyclopediaofmath.org/index.php/Kuramoto-Sivashinsky_equation).
     #
     # u_t + u*u_x + u_xx + diffusion*u_xxxx = 0, periodic BCs on [0,2*pi*L].
     # time step dt with N fourier collocation points.
