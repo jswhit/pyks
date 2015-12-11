@@ -10,7 +10,7 @@ class KS(object):
     # http://onlinelibrary.wiley.com/doi/10.1002/fld.2020/pdf
     # http://sprott.physics.wisc.edu/pubs/paper335.pdf
     #
-    # u_t = -u*u_x - u_xx - diffusion*u_xxxx, periodic BCs on [0,2*pi*L].
+    # u_t + u*u_x + u_xx + diffusion*u_xxxx = 0, periodic BCs on [0,2*pi*L].
     # time step dt with N fourier collocation points.
     # energy enters the system at long wavelengths via u_xx,
     # (an unstable diffusion term),
@@ -18,15 +18,12 @@ class KS(object):
     # dissipates via diffusion*u_xxxx.
     #
     def __init__(self,L=16,N=128,dt=0.5,diffusion=1.0,members=1,rs=None):
-        self.L = L
-        self.n = N
-        self.members = members
-        self.dt = dt
+        self.L = L; self.n = N; self.members = members; self.dt = dt
         self.diffusion = diffusion
         kk = N*np.fft.fftfreq(N)[0:(N/2)+1]  # wave numbers
         self.wavenums = kk
         k  = kk.astype(np.float)/L
-        self.ik    = 1j*k              # spectral derivative operator
+        self.ik    = 1j*k                   # spectral derivative operator
         self.lin   = k**2 - diffusion*k**4  # Fourier multipliers for linear term
         # random noise initial condition.
         if rs is None:
