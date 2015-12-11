@@ -187,12 +187,6 @@ if method in [4,5,6]:
     #print 'neig = ',neig
     zz = (eigs*np.sqrt(evals/frac)).T
     z = zz[ndim-neig:ndim,:]
-    #import matplotlib.pyplot as plt
-    #print zz[-1].min(),zz[-1].max(),np.sqrt(ndim)*eigs[:,-1].min(),np.sqrt(ndim)*eigs[:,-1].max()
-    #print np.sqrt(evals[-1]/(ndim*frac))
-    #scalefact_eig1 = zz[-1].max()
-    #plt.plot(zz[-1]) # 1st eigenvector.
-    #plt.show()
 else:
     neig = 0
     z = None
