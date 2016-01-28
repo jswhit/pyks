@@ -47,10 +47,10 @@ if len(sys.argv) > 5:
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 21000 # ob times
-nens = 10 # ensemble members
+nens = 8 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
-dtassim = 1 # assimilation interval
+dtassim = 2.0 # assimilation interval
 # Gaussian or running average smoothing in H.
 # for running average, smooth_len is half-width of boxcar.
 # for gaussian, smooth_len is standard deviation.
@@ -161,18 +161,19 @@ if corrl < 2*ndim:
             rr = float(i-j)
             if i-j < -(ndim/2): rr = float(ndim-j+i)
             if i-j > (ndim/2): rr = float(i-ndim-j)
-            r = np.fabs(rr)/corrl
-            #if r < 1.: # Bohman taper
-            #    taper = (1.-r)*np.cos(np.pi*r) + np.sin(np.pi*r)/np.pi
-            #taper = np.exp(-(r**2/0.15)) # Gaussian
-            # Gaspari-Cohn polynomial.
-            rr = 2.*r
-            taper = 0.
-            if r <= 0.5:
-                taper = ((( -0.25*rr +0.5 )*rr +0.625 )*rr -5.0/3.0 )*rr**2+1.
-            elif r > 0.5 and r < 1.:
-                taper = (((( rr/12.0 -0.5 )*rr +0.625 )*rr +5.0/3.0 )*rr -5.0 )*rr \
-                        + 4.0 - 2.0 / (3.0 * rr)
+            r = np.fabs(rr)/corrl; taper = 0.0
+            # Bohman taper (Gneiting 2002, doi:10.1006/jmva.2001.2056,
+            # equation, eq 21)
+            if r < 1.:
+                taper = (1.-r)*np.cos(np.pi*r) + np.sin(np.pi*r)/np.pi
+            # Gaspari-Cohn polynomial (Gneiting 2002, eq 23).
+            # Figure 3 of that paper compares Bohman and GC tapers.
+            #rr = 2.*r
+            #if r <= 0.5:
+            #    taper = ((( -0.25*rr +0.5 )*rr +0.625 )*rr -5.0/3.0 )*rr**2+1.
+            #elif r > 0.5 and r < 1.:
+            #    taper = (((( rr/12.0 -0.5 )*rr +0.625 )*rr +5.0/3.0 )*rr -5.0 )*rr \
+            #            + 4.0 - 2.0 / (3.0 * rr)
             covlocal[j,i]=taper
 
 # compute square root of covlocal
