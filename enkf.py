@@ -201,14 +201,15 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
         # update modulated ensemble perts with ETKF weights
         pasqrt_inv, painv = symsqrtinv_psd(pa)
         enswts = np.sqrt(nanals2-1)*pasqrt_inv
-        xprime2 = np.dot(enswts.T,xprime2)
         # just use 1st nanals posterior members, rescaled.
-        xprime = xprime2[0:nanals]/scalefact
+        #xprime2 = np.dot(enswts.T,xprime2)
+        #xprime = xprime2[0:nanals]/scalefact
         # this is equivalent, but a little faster
-        #xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
-        # use random sample of modulated ens posterior perts, rescaled (doesn't work)
-        #ix = rs.random.choice(np.arange(nanals2),size=nanals)
-        #xprime = xprime2[ix]
+        xprime = np.dot(enswts[:,0:nanals].T,xprime2)/scalefact
+        xprime_mean = np.abs(xprime.mean(axis=0))
+        # make sure mean of posterior perts is zero
+        if xprime_mean.max() > 1.e-13:
+            raise ValueError('nonzero perturbation mean')
 
     return xmean, xprime
 
