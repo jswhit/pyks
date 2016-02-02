@@ -182,10 +182,7 @@ def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
             raise ValueError('must pass random state if po=True')
         # make sure ob noise has zero mean and correct stdev.
         obnoise =\
-        np.sqrt(oberrvar)*rs.standard_normal(size=(nanals,nobs))
-        obnoise_var =\
-        ((obnoise-obnoise.mean(axis=0))**2).sum(axis=0)/(nanals-1)
-        obnoise = np.sqrt(oberrvar)*obnoise/np.sqrt(obnoise_var)
+        np.sqrt(oberrvar*float(nanals)/float(nanals-1))*rs.standard_normal(size=(nanals,nobs))
         hxprime = obnoise - obnoise.mean(axis=0) + hxprime[0:nanals]/scalefact
         xprime = xprime - np.dot(kfgain,hxprime.T).T
     else:
