@@ -163,9 +163,12 @@ def getkf(xmean,xprime,h,obs,oberrvar):
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     reducedgain = np.dot(xprime.T,u)*(1.-np.sqrt((nanals-1)/sp))
     # ETKF form
+    # method 1
     #pasqrt_inv =  (u * (np.sqrt((nanals-1)/sp))).dot(u.T)
     #xprime = np.dot(xprime.T, pasqrt_inv).T
+    # method 2
     #xprime = xprime - np.dot(reducedgain,u.T).T
+    # this is equivalent to above, since u.T = np.dot((v.T/s).T,YbRsqrtinv.T)
     #xprime = xprime - np.dot(reducedgain,np.dot((v.T/s).T,YbRsqrtinv.T)).T
     # GETKF form
     reducedgain = np.dot(reducedgain,(v.T/s).T)*sqrtoberrvar_inv
@@ -200,8 +203,8 @@ def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
     painv =  (u * (1./sp)).dot(u.T)
     kfgain = np.dot(xprime2.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
     xmean = xmean + np.dot(kfgain, obs-hxmean)
-    reducedgain = np.dot(xprime2.T,u)*(1.-np.sqrt((nanals2-1)/sp))
-    reducedgain = np.dot(reducedgain,(v.T/s).T)*sqrtoberrvar_inv
+    reducedgain = np.dot(np.dot(xprime2.T,u)*(1.-np.sqrt((nanals2-1)/sp)),\
+                         (v.T/s).T)*sqrtoberrvar_inv
     xprime = xprime - np.dot(reducedgain,hxprime_orig.T).T
     return xmean, xprime
 
