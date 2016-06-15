@@ -1,6 +1,6 @@
 import numpy as np
 from numpy.linalg import eigh # scipy.linalg.eigh broken on my mac
-from scipy.linalg import cho_solve, cho_factor
+from scipy.linalg import cho_solve, cho_factor, svd
 
 def symsqrt_psd(a, inv=False):
     """symmetric square-root of a symmetric positive definite matrix"""
@@ -100,11 +100,12 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
     gainfact = np.dot(Dsqrt,tmpinv)
     reducedgain = np.dot(kfgain, gainfact)
+    print reducedgain.min(), reducedgain.max(), reducedgain.shape
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):
         hxprime[nanal] = np.dot(h,xprime[nanal])
-    xprime = xprime - np.dot(reducedgain, hxprime[:,:,np.newaxis]).T.squeeze()
+    xprime = xprime - np.dot(reducedgain,hxprime.T).T
     return xmean, xprime
 
 def bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rs):
@@ -143,6 +144,65 @@ def etkf(xmean,xprime,h,obs,oberrvar):
     enswts = np.sqrt(nanals-1)*pasqrt_inv
     xmean = xmean + np.dot(kfgain, obs-hxmean)
     xprime = np.dot(enswts.T,xprime)
+    return xmean, xprime
+
+def getkf(xmean,xprime,h,obs,oberrvar):
+    """GETKF (use only with full rank ensemble, no localization)"""
+    nanals, ndim = xprime.shape; nobs = obs.shape[-1]
+    # forward operator.
+    hxprime = np.empty((nanals, nobs), xprime.dtype)
+    for nanal in range(nanals):
+        hxprime[nanal] = np.dot(h,xprime[nanal])
+    hxmean = np.dot(h,xmean)
+    sqrtoberrvar_inv = 1./np.sqrt(oberrvar)
+    YbRsqrtinv = hxprime * sqrtoberrvar_inv
+    u, s, v = svd(YbRsqrtinv,full_matrices=False)
+    sp = s**2+nanals-1
+    painv =  (u * (1./sp)).dot(u.T)
+    kfgain = np.dot(xprime.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
+    xmean = xmean + np.dot(kfgain, obs-hxmean)
+    reducedgain = np.dot(xprime.T,u)*(1.-np.sqrt((nanals-1)/sp))
+    # ETKF form
+    #pasqrt_inv =  (u * (np.sqrt((nanals-1)/sp))).dot(u.T)
+    #xprime = np.dot(xprime.T, pasqrt_inv).T
+    #xprime = xprime - np.dot(reducedgain,u.T).T
+    #xprime = xprime - np.dot(reducedgain,np.dot((v.T/s).T,YbRsqrtinv.T)).T
+    # GETKF form
+    reducedgain = np.dot(reducedgain,(v.T/s).T)*sqrtoberrvar_inv
+    xprime = xprime - np.dot(reducedgain,hxprime.T).T
+    return xmean, xprime
+
+def getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
+    """GETKF with modulated ensemble"""
+    nanals, ndim = xprime.shape; nobs = obs.shape[-1]
+    if z is None:
+        raise ValueError('z not specified')
+    # modulation ensemble
+    neig = z.shape[0]; nanals2 = neig*nanals; nanal2 = 0
+    xprime2 = np.zeros((nanals2,ndim),xprime.dtype)
+    for j in range(neig):
+        for nanal in range(nanals):
+            xprime2[nanal2,:] = xprime[nanal,:]*z[neig-j-1,:]
+            nanal2 += 1
+    xprime2 = np.sqrt(float(nanals2-1)/float(nanals-1))*xprime2
+    # forward operator.
+    hxprime = np.empty((nanals2, nobs), xprime2.dtype)
+    hxprime_orig = np.empty((nanals, nobs), xprime.dtype)
+    for nanal in range(nanals2):
+        hxprime[nanal] = np.dot(h,xprime2[nanal])
+    for nanal in range(nanals):
+        hxprime_orig[nanal] = np.dot(h,xprime[nanal])
+    hxmean = np.dot(h,xmean)
+    sqrtoberrvar_inv = 1./np.sqrt(oberrvar)
+    YbRsqrtinv = hxprime * sqrtoberrvar_inv
+    u, s, v = svd(YbRsqrtinv,full_matrices=False)
+    sp = s**2+nanals2-1
+    painv =  (u * (1./sp)).dot(u.T)
+    kfgain = np.dot(xprime2.T,np.dot(painv,YbRsqrtinv*sqrtoberrvar_inv))
+    xmean = xmean + np.dot(kfgain, obs-hxmean)
+    reducedgain = np.dot(xprime2.T,u)*(1.-np.sqrt((nanals2-1)/sp))
+    reducedgain = np.dot(reducedgain,(v.T/s).T)*sqrtoberrvar_inv
+    xprime = xprime - np.dot(reducedgain,hxprime_orig.T).T
     return xmean, xprime
 
 def etkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=None,po=False):
