@@ -3,7 +3,7 @@ import numpy as np
 import sys
 from KS import KS
 from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
-                 serial_ensrf_modens, bulk_enkf
+                 serial_ensrf_modens, bulk_enkf, getkf, getkf_modens
 np.seterr(all='raise') # raise error when overflow occurs
 
 if len(sys.argv) < 3:
@@ -27,6 +27,8 @@ method:  =0 for serial Potter method
          =6 for ETKF with modulation ensemble and perturbed obs
          =7 for serial Potter method using sqrt of localized Pb ensemble
          =8 for bulk EnKF (all obs at once) with perturbed obs.
+         =9 for GETKF (no localization applied)
+         =10 for GETKF (with modulated ensemble)
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -46,8 +48,8 @@ if len(sys.argv) > 5:
     covinflate2 = float(sys.argv[6])
 
 ntstart = 1000 # time steps to spin up truth run
-ntimes = 21000 # ob times
-nens = 8 # ensemble members
+ntimes = 81000 # ob times
+nens = 10 # ensemble members
 oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 2.0 # assimilation interval
@@ -150,6 +152,10 @@ def ensrf(ensemble,xmean,xprime,h,obs,oberrvar,covlocal,method=1,z=None):
         return serial_ensrf_modens(xmean,xprime,h,obs,oberrvar,covlocal,None)
     elif method == 8: # enkf with perturbed obs all at once
         return bulk_enkf(xmean,xprime,h,obs,oberrvar,covlocal,rsens)
+    elif method == 9: # getkf with no localization
+        return getkf(xmean,xprime,h,obs,oberrvar)
+    elif method == 10: # getkf with modulated ensemble
+        return getkf_modens(xmean,xprime,h,obs,oberrvar,covlocal,z,rs=rsens,po=True)
     else:
         raise ValueError('illegal value for enkf method flag')
 
@@ -177,7 +183,7 @@ if corrl < 2*ndim:
             covlocal[j,i]=taper
 
 # compute square root of covlocal
-if method in [4,5,6]:
+if method in [4,5,6,10]:
     evals, eigs = np.linalg.eigh(covlocal)
     evals = np.where(evals > 1.e-10, evals, 1.e-10)
     evalsum = evals.sum(); neig = 0
