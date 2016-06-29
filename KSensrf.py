@@ -170,16 +170,16 @@ if corrl < 2*ndim:
             r = np.fabs(rr)/corrl; taper = 0.0
             # Bohman taper (Gneiting 2002, doi:10.1006/jmva.2001.2056,
             # equation, eq 21)
-            if r < 1.:
-                taper = (1.-r)*np.cos(np.pi*r) + np.sin(np.pi*r)/np.pi
+            #if r < 1.:
+            #    taper = (1.-r)*np.cos(np.pi*r) + np.sin(np.pi*r)/np.pi
             # Gaspari-Cohn polynomial (Gneiting 2002, eq 23).
             # Figure 3 of that paper compares Bohman and GC tapers.
-            #rr = 2.*r
-            #if r <= 0.5:
-            #    taper = ((( -0.25*rr +0.5 )*rr +0.625 )*rr -5.0/3.0 )*rr**2+1.
-            #elif r > 0.5 and r < 1.:
-            #    taper = (((( rr/12.0 -0.5 )*rr +0.625 )*rr +5.0/3.0 )*rr -5.0 )*rr \
-            #            + 4.0 - 2.0 / (3.0 * rr)
+            rr = 2.*r
+            if r <= 0.5:
+                taper = ((( -0.25*rr +0.5 )*rr +0.625 )*rr -5.0/3.0 )*rr**2+1.
+            elif r > 0.5 and r < 1.:
+                taper = (((( rr/12.0 -0.5 )*rr +0.625 )*rr +5.0/3.0 )*rr -5.0 )*rr \
+                        + 4.0 - 2.0 / (3.0 * rr)
             covlocal[j,i]=taper
 
 # compute square root of covlocal
