@@ -19,12 +19,14 @@ class KS(object):
         kk = N*np.fft.fftfreq(N)[0:(N/2)+1]  # wave numbers
         self.wavenums = kk
         k  = kk.astype(np.float)/L
+        self.k     = k
         self.ik    = 1j*k                   # spectral derivative operator
         self.lin   = k**2 - diffusion*k**4  # Fourier multipliers for linear term
         # random noise initial condition.
         if rs is None:
             rs = np.random.RandomState()
         x = 0.01*rs.standard_normal(size=(members,N))
+        self.extradiff = 2.0*diffusion*np.cos(np.linspace(0,np.pi,N))**4
         # remove zonal mean from initial condition.
         self.x = x - x.mean()
         # spectral space variable
@@ -32,7 +34,8 @@ class KS(object):
     def nlterm(self,xspec):
         # compute tendency from nonlinear term.
         x = np.fft.irfft(xspec,axis=-1)
-        return -0.5*self.ik*np.fft.rfft(x**2,axis=-1)
+        extradiff = -self.extradiff*np.fft.irfft(self.k**2*xspec,axis=-1)
+        return -0.5*self.ik*np.fft.rfft(x**2+extradiff,axis=-1)
     def advance(self):
         # semi-implicit third-order runge kutta update.
         # ref: http://journals.ametsoc.org/doi/pdf/10.1175/MWR3214.1
