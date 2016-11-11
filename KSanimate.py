@@ -5,7 +5,7 @@ import matplotlib.animation as animation
 
 L   = 16           # domain is 0 to 2.*np.pi*L
 N   = 128          # number of collocation points
-dt  = 1.0          # time step
+dt  = 0.5          # time step
 diffusion = 2.0
 ks = KS(L=L,diffusion=diffusion,N=N,dt=dt) # instantiate model
 
@@ -18,7 +18,7 @@ u = u - u.mean()
 ks.xspec[0] = np.fft.rfft(u)
 
 # time stepping loop.
-nmin = 400; nmax = 2000
+nmin = 1000; nmax = 5000
 uu = []; tt = []
 vspec = np.zeros(ks.xspec.shape[1], np.float)
 x = np.arange(N)
@@ -46,11 +46,11 @@ def updatefig(n):
     uu.append(u); tt.append(n*dt)
     return line,
 
-Writer = animation.writers['ffmpeg']
-writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+#Writer = animation.writers['ffmpeg']
+#writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
 ani = animation.FuncAnimation(fig, updatefig, np.arange(1,nmax+1), init_func=init,
                               interval=25, blit=True, repeat=False)
-ani.save('KS.mp4',writer=writer)
+#ani.save('KS.mp4',writer=writer)
 plt.show()
 
 plt.figure()
@@ -64,7 +64,7 @@ uup = uu - uu.mean(axis=0)
 print uup.shape
 cov = np.dot(uup.T,uup)
 print 'cov',cov.min(), cov.max(), cov.shape
-nplt = 800
+nplt = 500
 plt.contourf(x,tt[:nplt],uu[:nplt],31,cmap=plt.cm.spectral,extend='both')
 plt.xlabel('x')
 plt.ylabel('t')
