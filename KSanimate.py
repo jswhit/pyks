@@ -6,8 +6,8 @@ import matplotlib.animation as animation
 L   = 16           # domain is 0 to 2.*np.pi*L
 N   = 128          # number of collocation points
 dt  = 0.5          # time step
-diffusion = 2.0
-ks = KS(L=L,diffusion=diffusion,N=N,dt=dt) # instantiate model
+diffusion = 1.0; diff_fact = 5.0
+ks = KS(L=L,diffusion=diffusion,diff_fact=diff_fact,N=N,dt=dt) # instantiate model
 
 # define initial condition
 #u = np.cos(x/L)*(1.0+np.sin(x/L)) # smooth IC
@@ -64,7 +64,7 @@ uup = uu - uu.mean(axis=0)
 print uup.shape
 cov = np.dot(uup.T,uup)
 print 'cov',cov.min(), cov.max(), cov.shape
-nplt = 500
+nplt = 2000
 plt.contourf(x,tt[:nplt],uu[:nplt],31,cmap=plt.cm.spectral,extend='both')
 plt.xlabel('x')
 plt.ylabel('t')

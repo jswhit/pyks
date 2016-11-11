@@ -13,7 +13,7 @@ class KS(object):
     # cascades to short wavelengths due to the nonlinearity u*u_x, and
     # dissipates via diffusion*u_xxxx.
     #
-    def __init__(self,L=16,N=128,dt=0.5,diffusion=1.0,members=1,rs=None):
+    def __init__(self,L=16,N=128,dt=0.5,diffusion=1.0,diff_fact=1.0,members=1,rs=None):
         self.L = L; self.n = N; self.members = members; self.dt = dt
         self.diffusion = diffusion
         kk = N*np.fft.fftfreq(N)[0:(N/2)+1]  # wave numbers
@@ -25,10 +25,10 @@ class KS(object):
         if rs is None:
             rs = np.random.RandomState()
         x = 0.01*rs.standard_normal(size=(members,N))
-        diff_fact = 2.0; exponent = 4
-        self.blend = np.cos(np.linspace(0,np.pi,N))**exponent
-        self.lin   = k**2 - (diffusion/diff_fact)*k**4  # Fourier multipliers for linear term
-        self.lin2  = k**2 - diff_fact*diffusion*k**4  # Fourier multipliers for linear term
+        self.blend = np.cos(np.linspace(0,np.pi,N))**6
+        # Fourier multipliers for linear term
+        self.lin   = k**2 - diffusion*k**4  # middle of domain
+        self.lin2  = k**2 - diff_fact*diffusion*k**4  # left and right edges
         # remove zonal mean from initial condition.
         self.x = x - x.mean()
         # spectral space variable
