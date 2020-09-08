@@ -7,7 +7,7 @@ from enkf import serial_ensrf, bulk_ensrf, etkf, letkf, etkf_modens,\
 np.seterr(all='raise') # raise error when overflow occurs
 
 if len(sys.argv) < 3:
-    msg="""python KSensrf.py covinflate covlocal method
+    msg="""python KSensrf.py covlocal method smoothlen covinflate1 covfinflate2
 
 all variables are observed, assimilation interval given by dtassim,
 nens ensemble members, observation error standard deviation = oberrstdev,
@@ -29,6 +29,8 @@ method:  =0 for serial Potter method
          =8 for bulk EnKF (all obs at once) with perturbed obs.
          =9 for GETKF (no localization applied)
          =10 for GETKF (with modulated ensemble)
+
+smoothlen:  averaging kernel width for forward operator (0 if no averaging)
 
 covinflate1,covinflate2:  (optional) inflation parameters corresponding
 to a and b in Hodyss and Campbell.  If not specified, a=b=1. If covinflate2
@@ -89,9 +91,9 @@ xprime = xtruth - xtruth_mean
 xvar = np.sum(xprime**2,axis=0)/(ntimes-1)
 xtruth_stdev = np.sqrt(xvar.mean())
 if verbose:
-    print 'climo for truth run:'
-    print 'x mean =',xtruth_mean
-    print 'x stdev =',xtruth_stdev
+    print('climo for truth run:')
+    print('x mean =',xtruth_mean)
+    print('x stdev =',xtruth_stdev)
 # forward operator.
 # identity obs.
 ndim = ensemble.n
@@ -127,9 +129,9 @@ for n in range(ntstart):
 
 nsteps = np.int(dtassim/model.dt) # time steps in assimilation interval
 if verbose:
-    print 'ntstart, nspinup, ntot, nsteps =',ntstart,nspinup,ntot,nsteps
+    print('ntstart, nspinup, ntot, nsteps =',ntstart,nspinup,ntot,nsteps)
 if nsteps % 1  != 0:
-    raise ValueError, 'assimilation interval must be an integer number of model time steps'
+    raise(ValueError, 'assimilation interval must be an integer number of model time steps')
 else:
     nsteps = int(nsteps)
 
@@ -223,10 +225,10 @@ for nassim in range(0,ntot,nsteps):
         diverged = True
         break
     fsprd = (xprime**2).sum(axis=0)/(ensemble.members-1)
-    corr = (xprime.T*xprime[:,ndim/2]).sum(axis=1)/float(ensemble.members-1)
+    corr = (xprime.T*xprime[:,ndim//2]).sum(axis=1)/float(ensemble.members-1)
     hxprime = np.dot(xprime,h)
     fsprdob = (hxprime**2).sum(axis=0)/(ensemble.members-1)
-    corrh = (xprime.T*hxprime[:,ndim/2]).sum(axis=1)/float(ensemble.members-1)
+    corrh = (xprime.T*hxprime[:,ndim//2]).sum(axis=1)/float(ensemble.members-1)
     if nassim >= nspinup:
         fsprdmean = fsprdmean + fsprd
         fsprdobmean = fsprdobmean + fsprdob
@@ -246,7 +248,7 @@ for nassim in range(0,ntot,nsteps):
         aerrmean = aerrmean + aerr
         analerr.append(aerr.mean()); analsprd.append(asprd.mean())
     if verbose:
-        print nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean())
+        print(nassim,timetruth[nassim],np.sqrt(ferr.mean()),np.sqrt(fsprd.mean()),np.sqrt(aerr.mean()),np.sqrt(asprd.mean()))
     if covinflate2 > 0:
         # Hodyss and Campbell inflation.
         inc = xmean - xmean_b
@@ -265,7 +267,7 @@ for nassim in range(0,ntot,nsteps):
 # print out time mean stats.
 # error and spread are normalized by observation error.
 if diverged:
-    print method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.nan,np.nan,np.nan,np.nan,neig
+    print(method,len(fcsterr),corrl,covinflate1,covinflate2,oberrstdev,np.nan,np.nan,np.nan,np.nan,neig)
 else:
     ncount = len(fcstsprd)
     fcsterr = np.array(fcsterr)
@@ -283,13 +285,13 @@ else:
     corrhmean = corrhmean/ncount
     fstd = np.sqrt(fsprdmean)
     fstdob = np.sqrt(fsprdobmean)
-    covmean = corrmean; corrmean = corrmean/(fstd*fstd[ndim/2])
-    covhmean = corrhmean; corrhmean = corrhmean/(fstd*fstdob[ndim/2])
+    covmean = corrmean; corrmean = corrmean/(fstd*fstd[ndim//2])
+    covhmean = corrhmean; corrhmean = corrhmean/(fstd*fstdob[ndim//2])
     fcsterrcorr =\
-    (fcsterr1.T*fcsterr1[:,ndim/2]).sum(axis=1)/float(fcsterr1.shape[0]-1)
+    (fcsterr1.T*fcsterr1[:,ndim//2]).sum(axis=1)/float(fcsterr1.shape[0]-1)
     ferrstd = np.sqrt((fcsterr1**2).sum(axis=0)/float(fcsterr1.shape[0]-1))
     errcovmean = fcsterrcorr
-    fcsterrcorr = fcsterrcorr/(ferrstd*ferrstd[ndim/2])
+    fcsterrcorr = fcsterrcorr/(ferrstd*ferrstd[ndim//2])
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(ndim),corrmean,color='k',label='r')
     #plt.plot(np.arange(ndim),corrhmean,color='b',label='r (x vs hx)')
@@ -303,5 +305,5 @@ else:
     #plt.xlim(0,ndim)
     #plt.legend()
     #plt.show()
-    print method,ncount,corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
-          np.sqrt(analerr.mean()),astdev,neig
+    print(method,ncount,corrl,covinflate1,covinflate2,oberrstdev,np.sqrt(fcsterr.mean()),fstdev,\
+          np.sqrt(analerr.mean()),astdev,neig)

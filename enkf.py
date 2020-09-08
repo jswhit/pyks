@@ -100,7 +100,7 @@ def bulk_ensrf(xmean,xprime,h,obs,oberrvar,covlocal):
     tmpinv = cho_solve(cho_factor(tmp),np.eye(nobs))
     gainfact = np.dot(Dsqrt,tmpinv)
     reducedgain = np.dot(kfgain, gainfact)
-    print reducedgain.min(), reducedgain.max(), reducedgain.shape
+    #print(reducedgain.min(), reducedgain.max(), reducedgain.shape)
     xmean = xmean + np.dot(kfgain, obs-np.dot(h,xmean))
     hxprime = np.empty((nanals, nobs), xprime.dtype)
     for nanal in range(nanals):

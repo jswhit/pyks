@@ -16,7 +16,7 @@ class KS(object):
     def __init__(self,L=16,N=128,dt=0.5,diffusion=1.0,members=1,rs=None):
         self.L = L; self.n = N; self.members = members; self.dt = dt
         self.diffusion = diffusion
-        kk = N*np.fft.fftfreq(N)[0:(N/2)+1]  # wave numbers
+        kk = N*np.fft.fftfreq(N)[0:(N//2)+1]  # wave numbers
         self.wavenums = kk
         k  = kk.astype(np.float)/L
         self.ik    = 1j*k                   # spectral derivative operator

@@ -42,7 +42,7 @@ def updatefig(n):
     vspec += np.abs(ks.xspec.squeeze())**2
     u = ks.x.squeeze()
     line.set_ydata(u)
-    print n,u.min(),u.max()
+    print(n,u.min(),u.max())
     uu.append(u); tt.append(n*dt)
     return line,
 
@@ -55,9 +55,9 @@ plt.figure()
 ncount = len(uu)
 vspec = vspec/ncount
 uu = np.array(uu); tt = np.array(tt)
-print tt.min(), tt.max()
+print(tt.min(), tt.max())
 nplt = 200
-plt.contourf(x,tt[:nplt],uu[:nplt],31,cmap=plt.cm.spectral,extend='both')
+plt.contourf(x,tt[:nplt],uu[:nplt],31,extend='both')
 plt.xlabel('x')
 plt.ylabel('t')
 plt.colorbar()
