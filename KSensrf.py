@@ -51,8 +51,8 @@ if len(sys.argv) > 5:
 
 ntstart = 1000 # time steps to spin up truth run
 ntimes = 81000 # ob times
-nens = 10 # ensemble members
-oberrstdev = 0.1; oberrvar = oberrstdev**2 # ob error
+nens = 5 # ensemble members
+oberrstdev = 1.0; oberrvar = oberrstdev**2 # ob error
 verbose = False # print error stats every time if True
 dtassim = 2.0 # assimilation interval
 # Gaussian or running average smoothing in H.
@@ -295,8 +295,8 @@ else:
     #import matplotlib.pyplot as plt
     #plt.plot(np.arange(ndim),corrmean,color='k',label='r')
     #plt.plot(np.arange(ndim),corrhmean,color='b',label='r (x vs hx)')
-    #plt.plot(np.arange(ndim),h[:,ndim/2]/h.max(),color='r',label='H')
-    #plt.plot(np.arange(ndim),covlocal[:,ndim/2],'k:',label='L')
+    #plt.plot(np.arange(ndim),h[:,ndim//2]/h.max(),color='r',label='H')
+    #plt.plot(np.arange(ndim),covlocal[:,ndim//2],'k:',label='L')
     #plt.xlim(0,ndim)
     #plt.legend()
     #plt.figure()
