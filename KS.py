@@ -1,4 +1,17 @@
 import numpy as np
+try: # pyfftw is *much* faster
+    from pyfftw.interfaces import numpy_fft, cache
+    #print('# using pyfftw...')
+    cache.enable()
+    rfft = numpy_fft.rfft; irfft = numpy_fft.irfft
+except ImportError: # fall back on numpy fft.
+    print('# WARNING: using numpy fft (install pyfftw for better performance)...')
+    def rfft(*args, **kwargs):
+        kwargs.pop('threads',None)
+        return np.fft.rfft(*args,**kwargs)
+    def irfft(*args, **kwargs):
+        kwargs.pop('threads',None)
+        return np.fft.irfft(*args,**kwargs)
 
 class KS(object):
     #
@@ -28,15 +41,15 @@ class KS(object):
         # remove zonal mean from initial condition.
         self.x = x - x.mean()
         # spectral space variable
-        self.xspec = np.fft.rfft(self.x,axis=-1)
+        self.xspec = rfft(self.x,axis=-1)
     def nlterm(self,xspec):
         # compute tendency from nonlinear term.
-        x = np.fft.irfft(xspec,axis=-1)
-        return -0.5*self.ik*np.fft.rfft(x**2,axis=-1)
+        x = irfft(xspec,axis=-1)
+        return -0.5*self.ik*rfft(x**2,axis=-1)
     def advance(self):
         # semi-implicit third-order runge kutta update.
         # ref: http://journals.ametsoc.org/doi/pdf/10.1175/MWR3214.1
-        self.xspec = np.fft.rfft(self.x,axis=-1)
+        self.xspec = rfft(self.x,axis=-1)
         xspec_save = self.xspec.copy()
         for n in range(3):
             dt = self.dt/(3-n)
@@ -44,4 +57,4 @@ class KS(object):
             self.xspec = xspec_save + dt*self.nlterm(self.xspec)
             # implicit trapezoidal adjustment for linear term
             self.xspec = (self.xspec+0.5*self.lin*dt*xspec_save)/(1.-0.5*self.lin*dt)
-        self.x = np.fft.irfft(self.xspec,axis=-1)
+        self.x = irfft(self.xspec,axis=-1)
